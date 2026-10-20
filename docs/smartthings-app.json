@@ -1,0 +1,14 @@
+{
+  "appName": "controle-do-ar-CHANGE-ME",
+  "displayName": "Controle do Ar",
+  "description": "Windows tray remote for Samsung air conditioners",
+  "appType": "API_ONLY",
+  "classifications": ["CONNECTED_SERVICE"],
+  "singleInstance": true,
+  "apiOnly": {},
+  "oauth": {
+    "clientName": "Controle do Ar",
+    "scope": ["r:devices:*", "x:devices:*", "r:locations:*"],
+    "redirectUris": ["https://httpbin.org/get"]
+  }
+}

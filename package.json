@@ -1,0 +1,15 @@
+{
+  "name": "arcond",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.12.2"
+  },
+  "description": "Windows tray remote for Samsung air conditioners (SmartThings)",
+  "license": "MIT"
+}

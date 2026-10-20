@@ -1,0 +1,35 @@
+[package]
+name = "arcond"
+version = "1.0.0"
+description = "Windows tray remote for Samsung air conditioners (SmartThings)"
+authors = ["Erick"]
+license = "MIT"
+edition = "2021"
+
+[lib]
+name = "arcond_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
+
+[dependencies]
+ab_glyph = "0.2.32"
+reqwest = { version = "0.13.5", default-features = false, features = ["json", "native-tls", "http2", "form"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+tauri = { version = "2.12.3", features = ["tray-icon", "image-png"] }
+tauri-plugin-autostart = "2.7.0"
+tauri-plugin-opener = "2.7.1"
+tauri-plugin-single-instance = "2.5.3"
+tokio = { version = "1.53.2", features = ["time", "sync", "macros"] }
+
+[build-dependencies]
+tauri-build = { version = "2.7.2", features = [] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security_Credentials", "Win32_UI_WindowsAndMessaging", "Win32_Globalization"] }

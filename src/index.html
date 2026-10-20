@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Controle do Ar</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Ícones: traços no estilo Lucide (ISC), desenhados em 24×24 -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M7 12h10"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M7 12h10"/><path d="M12 7v10"/></symbol>
+    <symbol id="i-fan" viewBox="0 0 24 24"><path d="M10.83 16.38a6.08 6.08 0 0 1-8.62-7l5.41 1.45a6.08 6.08 0 0 1 7-8.62l-1.45 5.41a6.08 6.08 0 0 1 8.62 7l-5.41-1.45a6.08 6.08 0 0 1-7 8.62z"/><path d="M12 12v.01"/></symbol>
+    <symbol id="i-dir" viewBox="0 0 24 24"><path d="M3 6h15"/><path d="m15 3 3 3-3 3"/><path d="M3 12h18"/><path d="m18 9 3 3-3 3"/><path d="M3 18h15"/><path d="m15 15 3 3-3 3"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+    <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></symbol>
+  </svg>
+
+  <main id="app" class="loading">
+    <!-- Controle -->
+    <section id="view-main" class="view">
+      <header class="top">
+        <div class="title">
+          <h1 id="device-label" data-i18n="airSection">Ar-condicionado</h1>
+          <p id="place">&nbsp;</p>
+        </div>
+        <button id="btn-settings" class="icon-btn" data-i18n-title="settings"><svg class="i"><use href="#i-more"/></svg></button>
+      </header>
+
+      <div class="scroll">
+        <section class="panel">
+          <div class="hero" id="hero">
+            <svg class="waves" viewBox="0 0 360 100" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0 70 C 80 40, 150 95, 230 60 S 330 30, 360 45 L 360 100 L 0 100 Z"/>
+              <path d="M0 85 C 90 60, 170 100, 250 78 S 330 60, 360 70 L 360 100 L 0 100 Z"/>
+            </svg>
+            <div class="hero-text">
+              <div class="hero-title" id="hero-title"></div>
+              <div class="hero-temp" id="hero-temp"></div>
+            </div>
+            <button id="btn-power" class="power" data-i18n-title="power"><svg class="i"><use href="#i-power"/></svg></button>
+          </div>
+
+          <div class="inner">
+            <button class="tile" id="tile-mode" data-sheet="mode">
+              <span class="lbl" data-i18n="mode"></span>
+              <span class="val" id="mode-val"></span>
+            </button>
+
+            <div class="tile temp" id="tile-temp">
+              <span class="lbl" data-i18n="setTemp"></span>
+              <span class="val" id="temp-val"></span>
+              <p class="note" id="temp-note" data-i18n="noTempInFan" hidden></p>
+              <div class="range">
+                <button class="round" id="temp-down" data-i18n-title="tempDown"><svg class="i"><use href="#i-minus"/></svg></button>
+                <div class="slider-box">
+                  <div class="scale"><span id="t-min"></span><span id="t-max"></span></div>
+                  <input id="slider" type="range" data-i18n-title="setTemp" />
+                </div>
+                <button class="round" id="temp-up" data-i18n-title="tempUp"><svg class="i"><use href="#i-plus"/></svg></button>
+              </div>
+            </div>
+
+            <div class="pair" id="pair">
+              <button class="tile icon-tile" id="tile-fan" data-sheet="fan">
+                <svg class="i big"><use href="#i-fan"/></svg>
+                <span class="lbl" data-i18n="fanSpeed"></span>
+                <span class="val" id="fan-val"></span>
+              </button>
+              <button class="tile icon-tile" id="tile-osc" data-sheet="osc">
+                <svg class="i big"><use href="#i-dir"/></svg>
+                <span class="lbl" data-i18n="airDirection"></span>
+                <span class="val" id="osc-val"></span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel list" id="options">
+          <button class="row" data-optional="windFree"><span class="row-main" data-i18n="windFree"></span><span class="switch"></span></button>
+          <button class="row" data-optional="speed"><span class="row-main" data-i18n="speed"></span><span class="switch"></span></button>
+          <button class="row" data-optional="quiet"><span class="row-main" data-i18n="quiet"></span><span class="switch"></span></button>
+          <!-- Modelos que informam a luz: interruptor. Comando alternativo (sem leitura): um botão que inverte. -->
+          <div class="row static" id="row-light">
+            <span class="row-main"><span data-i18n="light"></span></span>
+            <button class="pill" id="btn-light" data-i18n="lightToggle"></button>
+            <button class="switch-btn" id="sw-light" hidden><span class="switch"></span></button>
+          </div>
+          <div class="row static" id="row-night">
+            <span class="row-main"><span data-i18n="night"></span><small id="night-hint"></small></span>
+            <button class="pill accent" id="btn-night" data-i18n="activate"></button>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- Configurações -->
+    <section id="view-settings" class="view" hidden>
+      <header class="top">
+        <button id="btn-back" class="icon-btn back" data-i18n-title="back"><svg class="i"><use href="#i-back"/></svg></button>
+        <div class="title"><h1 data-i18n="settings"></h1></div>
+      </header>
+      <div class="scroll">
+        <section class="panel list">
+          <button class="row" id="row-device"><span class="row-main"><span data-i18n="device"></span><small id="device-current"></small></span><svg class="i chev"><use href="#i-chev"/></svg></button>
+          <div class="row static"><span class="row-main" data-i18n="account"></span><span class="row-value" id="account"></span></div>
+          <button class="row" id="btn-login-oauth" hidden><span class="row-main accent-text"><span data-i18n="signInSt"></span><small data-i18n="patExpires"></small></span><svg class="i chev"><use href="#i-chev"/></svg></button>
+          <button class="row" id="btn-logout" hidden><span class="row-main" data-i18n="signOut"></span></button>
+        </section>
+
+        <section class="panel list" id="air-settings">
+          <div class="row static" id="row-beep">
+            <span class="row-main" data-i18n="beep"></span>
+            <span class="pills">
+              <button class="pill" data-beep="off" data-i18n="beepMute"></button>
+              <button class="pill" data-beep="on" data-i18n="beepOn"></button>
+            </span>
+          </div>
+          <button class="row" id="autoclean"><span class="row-main" data-i18n="autoClean"></span><span class="switch"></span></button>
+          <div class="row static" id="row-filter"><span class="row-main" data-i18n="filter"></span><span class="row-value" id="filter"></span></div>
+        </section>
+
+        <section class="panel list">
+          <button class="row" id="autostart"><span class="row-main" data-i18n="autostart"></span><span class="switch"></span></button>
+          <button class="row" id="btn-quit"><span class="row-main danger-text" data-i18n="quit"></span></button>
+        </section>
+        <p class="version" id="version"></p>
+      </div>
+    </section>
+
+    <!-- Login -->
+    <section id="view-login" class="view" hidden>
+      <header class="top">
+        <button id="btn-login-cancel" class="icon-btn back" data-i18n-title="back" hidden><svg class="i"><use href="#i-back"/></svg></button>
+        <div class="title"><h1 data-i18n="loginTitle"></h1></div>
+      </header>
+      <div class="scroll">
+        <section class="panel login">
+          <div id="login-oauth">
+            <p class="muted" data-i18n="loginText"></p>
+            <button id="btn-oauth" class="primary" data-i18n="signInSt"></button>
+            <div id="oauth-wait" class="wait" hidden>
+              <span class="spinner"></span><span data-i18n="loginWait"></span>
+              <button id="btn-oauth-cancel" class="text-btn" data-i18n="cancel"></button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel list">
+          <details id="manual" class="fold">
+            <summary class="row"><span class="row-main" data-i18n="googleFold"></span><svg class="i chev"><use href="#i-chev"/></svg></summary>
+            <div class="fold-body">
+              <ol class="steps"><li data-i18n="googleStep1"></li><li data-i18n="googleStep2"></li></ol>
+              <button id="btn-manual-open" class="secondary" data-i18n="openBrowser"></button>
+              <form id="manual-form" class="inline-form">
+                <input id="manual-input" data-i18n-placeholder="pastePlaceholder" autocomplete="off" spellcheck="false" />
+                <button type="submit" class="primary small" data-i18n="ok"></button>
+              </form>
+            </div>
+          </details>
+          <details id="pat" class="fold">
+            <summary class="row"><span class="row-main" data-i18n="patFold"></span><svg class="i chev"><use href="#i-chev"/></svg></summary>
+            <div class="fold-body">
+              <form id="login-form" class="inline-form">
+                <input id="token-input" type="password" data-i18n-placeholder="tokenPlaceholder" autocomplete="off" spellcheck="false" />
+                <button type="submit" class="primary small" data-i18n="ok"></button>
+              </form>
+            </div>
+          </details>
+        </section>
+        <p id="login-error" class="error"></p>
+      </div>
+    </section>
+
+    <footer class="status">
+      <span id="status-dot" class="dot"></span>
+      <span id="status-text"></span>
+      <span id="filter-chip" class="chip" hidden></span>
+    </footer>
+
+    <!-- Folha de opções (estilo One UI) -->
+    <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
+    <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true">
+      <h2 id="sheet-title"></h2>
+      <div class="sheet-options" id="sheet-options"></div>
+      <button class="text-btn sheet-cancel" id="sheet-cancel" data-i18n="cancel"></button>
+    </div>
+  </main>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
