@@ -10,6 +10,6 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2.12.2"
   },
-  "description": "Windows tray remote for Samsung air conditioners (SmartThings)",
+  "description": "Controle remoto do ar-condicionado Samsung na bandeja do Windows (SmartThings)",
   "license": "MIT"
 }

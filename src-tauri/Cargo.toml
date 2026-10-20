@@ -1,8 +1,8 @@
 [package]
 name = "arcond"
 version = "1.0.0"
-description = "Windows tray remote for Samsung air conditioners (SmartThings)"
-authors = ["Erick"]
+description = "Controle remoto do ar-condicionado Samsung na bandeja do Windows (SmartThings)"
+authors = ["Erick Fuzer"]
 license = "MIT"
 edition = "2021"
 
