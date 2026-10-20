@@ -1,7 +1,7 @@
 {
   "appName": "controle-do-ar-CHANGE-ME",
   "displayName": "Controle do Ar",
-  "description": "Windows tray remote for Samsung air conditioners",
+  "description": "Controle remoto do ar-condicionado Samsung na bandeja do Windows",
   "appType": "API_ONLY",
   "classifications": ["CONNECTED_SERVICE"],
   "singleInstance": true,
