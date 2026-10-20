@@ -21,7 +21,8 @@ não reenvia a luz se ele mesmo já a apagou.
 
 O estado da luz **não pode ser lido**: `samsungce.airConditionerLighting` está em `custom.disabledCapabilities`,
 o atributo `lighting` não acompanha a luz real e o `execute.data` volta `null`, mesmo depois de `refresh`.
-O app lembra o último envio e considera que o display acende sempre que o ar liga.
+O app lembra o último envio e considera que o display acende sempre que o ar liga
+(confirmado em 2026-10-20: a luz apagada volta a acender ao religar, igual no app oficial).
 
 Não confirmado: se `samsungce.airConditionerLighting` → `off` tem algum efeito (a API responde `COMPLETED`).
 
@@ -45,7 +46,6 @@ O app não assume um modelo: `src-tauri/src/device.rs` lê do status o que o apa
 O status real do modelo testado (sem identificadores) está em `src-tauri/tests/fixtures/windfree-ar24.json`.
 
 ## Pendente
-- Confirmar se a luz apagada volta a acender ao desligar e ligar o ar (o app assume que sim).
 - Em quais modos o WindFree é aceito.
 
 ## OAuth (app criado em 2026-10-11)
