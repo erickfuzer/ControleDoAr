@@ -1,117 +1,132 @@
-# Controle do Ar
+<div align="center">
 
-A Windows tray remote for Samsung air conditioners, using the official SmartThings API.
-Click the tray icon and a small remote pops up next to it — faster than reaching for your phone.
+# ❄️ Controle do Ar
 
-[Português](#português) · [How it works](#how-it-works) · [Build it yourself](#build-it-yourself)
+Controle remoto do ar-condicionado **Samsung** na bandeja do Windows, usando a API oficial da **SmartThings**. Um clique no ícone e o controle aparece ao lado dele, mais rápido que pegar o celular.
 
-<p align="center">
-  <img src="docs/screenshot-on.png" width="300" alt="Remote with the air conditioner on">
-  <img src="docs/screenshot-off.png" width="300" alt="Remote with the air conditioner off">
-</p>
+![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)
+![Tauri](https://img.shields.io/badge/Tauri-24C8DB?style=for-the-badge&logo=tauri&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+![SmartThings](https://img.shields.io/badge/SmartThings-15BFFF?style=for-the-badge&logo=smartthings&logoColor=white)
+![Windows](https://img.shields.io/badge/Windows_10_e_11-0078D4?style=for-the-badge)
 
-## Features
+<img src="docs/screenshot-on.png" alt="Controle com o ar ligado em resfriamento, temperatura, modo, vento e WindFree" width="300">
+<img src="docs/screenshot-off.png" alt="Controle com o ar desligado" width="300">
+<br>
+<sub>O controle com o ar ligado e desligado</sub>
+<br><br>
 
-- **Tray icon with the target temperature**, colored by mode (blue cooling, orange heating…), readable at 16 px.
-- **Left click:** a remote in the style of the SmartThings app — power, mode, temperature, fan speed and direction, WindFree, Quiet, Max (fast).
-- **Right click:** quick menu — power, temperature ±, mode, night mode, display light on/off.
-- **Display light** on/off, which the official app hides on some models (a real switch when the model reports the light state, a toggle button when it doesn't), and **night mode** (light off + beep muted + WindFree) in one click.
-- **Adapts to each model:** modes, fan speeds, temperature range and unit (°C/°F) come from the device itself. Features a model doesn't have are not shown.
-- **More than one air conditioner?** Pick which one to control in Settings.
-- Optimistic UI (changes show instantly and are reverted if the cloud rejects them), status refresh every minute, automatic backoff when the API rate limit is hit.
-- Portuguese and English, following the Windows language.
-- Light: a few MB of Rust plus the system WebView2. No Electron.
+[![Como compilar](https://img.shields.io/badge/▶_Como_compilar-3C7CF8?style=for-the-badge)](#como-compilar)
 
-## How it works
+</div>
 
-The app talks to `api.smartthings.com` with your SmartThings account. Signing in uses OAuth in a window of the app itself (private, nothing is kept after it closes); the tokens are stored in the **Windows Credential Manager** and renewed automatically. A Personal Access Token also works.
+## Funcionalidades
 
-Everything the remote shows is derived from the device status (`supportedAcModes`, `supportedAcFanModes`, setpoint range, `custom.disabledCapabilities`…). For the display light and the beep, the app uses the model's own capability when it is enabled, and falls back to the OCF `execute` command used by Samsung's app when it is not. Notes about the API, including a few surprises, are in [docs/API-NOTES.md](docs/API-NOTES.md).
+- **Ícone na bandeja com a temperatura alvo**, na cor do modo (azul no resfriamento, laranja no aquecimento etc.) e legível mesmo em 16 px
+- **Clique esquerdo:** abre um controle no estilo do app SmartThings, com ligar, modo, temperatura, intensidade e direção do vento, WindFree, Silencioso e Máx. (rápido)
+- **Clique direito:** menu rápido com ligar, temperatura ±, modo, modo noite e luz do display
+- **Luz do display:** acende e apaga a luz que o app oficial esconde em alguns modelos. Vira um interruptor quando o modelo informa o estado da luz, e um botão quando não informa
+- **Modo noite:** apaga a luz, silencia o bipe e liga o WindFree num clique só
+- **Se adapta a cada modelo:** modos, velocidades, faixa e unidade de temperatura (°C ou °F) vêm do próprio aparelho, e o que o modelo não tem fica escondido
+- **Vários aparelhos:** se a conta tiver mais de um ar, você escolhe qual controlar nas configurações
+- **Resposta imediata:** a mudança aparece na hora e é desfeita se a nuvem recusar. O estado atualiza a cada minuto, e o app espera sozinho quando bate no limite de requisições da API
+- **Português ou inglês**, conforme o idioma do Windows
+- **Leve:** alguns MB de Rust mais o WebView2 do sistema, sem Electron
 
-Tested on a 2024 Samsung WindFree (`DA-AC-RAC-01001`). Other Samsung models that expose the standard SmartThings air conditioner capabilities should work; reports are welcome.
+## Como funciona
 
-## Build it yourself
+O app conversa com a `api.smartthings.com` usando a sua conta SmartThings. O login é feito por OAuth numa janela do próprio app, que é anônima e não guarda nada depois de fechada. Os tokens ficam no **Gerenciador de Credenciais do Windows** e são renovados automaticamente. Também dá para entrar com um token pessoal (PAT).
 
-There are no prebuilt installers: OAuth apps carry a client secret, so each person builds with their own.
+Tudo o que o controle mostra vem do status do aparelho (`supportedAcModes`, `supportedAcFanModes`, faixa do setpoint, `custom.disabledCapabilities` etc.). Para a luz do display e o bipe, o app usa a capability do próprio modelo quando ela está ativa e, quando não está, o comando OCF `execute`, o mesmo que o app da Samsung usa. As descobertas sobre a API, incluindo algumas surpresas, estão em [docs/API-NOTES.md](docs/API-NOTES.md).
 
-**Requirements:** Windows 10 or 11, [Rust](https://rustup.rs), [Node.js](https://nodejs.org) 20+, and the WebView2 runtime (already present on Windows 11).
+Testado num Samsung WindFree 2024 (`DA-AC-RAC-01001`). Outros modelos Samsung que expõem as capabilities padrão de ar-condicionado da SmartThings devem funcionar. Se testar no seu, conte como foi.
 
-### 1. Create your SmartThings OAuth app (once)
+## Como compilar
+
+Não há instaladores prontos para baixar: o app OAuth carrega um client secret, então cada pessoa compila com o seu.
+
+**Requisitos:** Windows 10 ou 11, [Rust](https://rustup.rs), [Node.js](https://nodejs.org) 20 ou mais novo e o runtime do WebView2 (já vem no Windows 11).
+
+### 1. Crie o seu app OAuth na SmartThings (só uma vez)
+
+Instale a SmartThings CLI:
 
 ```bash
 npm install -g @smartthings/cli
 ```
 
-Edit [`docs/smartthings-app.json`](docs/smartthings-app.json) and give `appName` a unique value, then:
+Abra o [`docs/smartthings-app.json`](docs/smartthings-app.json), troque o `appName` por um nome único e crie o app:
 
 ```bash
 smartthings apps:create -i docs/smartthings-app.json
 ```
 
-The CLI opens your browser to sign in and prints an **OAuth Client Id** and **Client Secret**. Copy `.env.example` to `.env` and fill them in. `.env` is ignored by Git — keep it that way.
+A CLI abre o navegador para você entrar na conta e mostra um **OAuth Client Id** e um **Client Secret**. Copie o `.env.example` para `.env` e preencha os dois valores. O `.env` é ignorado pelo Git e deve continuar assim.
 
-> The redirect URI is `https://httpbin.org/get` on purpose: SmartThings rejects `http://localhost` redirects. The app intercepts the redirect inside its login window, so the authorization code never reaches httpbin. When signing in through the browser (needed for Google sign-in), the page just shows the code for you to paste back.
+> [!NOTE]
+> **Por que o redirecionamento é o httpbin:** a SmartThings recusa redirecionamentos para `http://localhost`, então o app usa `https://httpbin.org/get`. Ele intercepta esse redirecionamento dentro da própria janela de login, e o código de autorização nunca chega ao httpbin. Já no login pelo navegador (necessário para entrar com a conta Google), a página só mostra o código para você colar no app.
 
-Skipping this step is fine too: the app then asks for a [Personal Access Token](https://account.smartthings.com/tokens) instead (it expires after 24 hours).
+Também dá para pular este passo: sem o app OAuth, o login pede um [token pessoal (PAT)](https://account.smartthings.com/tokens), que expira em 24 horas.
 
-### 2. Run or build
+### 2. Rode ou gere o instalador
 
 ```bash
 npm install
-npm run dev     # development, with hot reload of the UI
-npm run build   # installer at src-tauri/target/release/bundle/nsis/
+npm run dev     # desenvolvimento, com a interface recarregando sozinha
+npm run build   # instalador em src-tauri/target/release/bundle/nsis/
 ```
 
-The installer is per-user (no admin) and downloads WebView2 if the PC doesn't have it. It is not code-signed, so Windows SmartScreen will warn the first time.
+O instalador é por usuário (não pede administrador) e baixa o WebView2 se o PC não tiver. Ele não tem assinatura digital, então o SmartScreen do Windows avisa na primeira vez.
 
-**Don't publish installers built with your client secret** — anyone could extract it from the executable. It can't access anyone's account by itself, but it lets others use your OAuth app's installation quota.
+> [!WARNING]
+> **Não publique instaladores gerados com o seu client secret.** Qualquer pessoa conseguiria extraí-lo do executável. Sozinho ele não dá acesso a nenhuma conta, mas deixa outras pessoas usarem a cota de instalações do seu app OAuth.
 
-## Project layout
+### Para desenvolver
+
+- **Testes:** `cargo test --manifest-path src-tauri/Cargo.toml`. Incluem o status real de um aparelho, sem identificadores, em `src-tauri/tests/fixtures`.
+- **Só a interface:** sirva a pasta `src/` com qualquer servidor estático e abra o `index.html`. Ele usa um backend falso (`dev-mock.js`). Adicione `?off`, `?simple` (modelo em °F sem vento nem WindFree) ou `?login` na URL para ver outros estados.
+
+## Limitações
+
+- Em alguns modelos a API não informa o estado da luz do display e do bipe, então eles aparecem como botões (como o "Acender/apagar" da luz), não como interruptores.
+- O login com a conta Google não funciona em janelas embutidas. Use a opção de entrar pelo navegador.
+- Só funciona no Windows: a bandeja, o Gerenciador de Credenciais e o posicionamento da janela são específicos dele.
+
+## Estrutura
 
 ```
-src/                 popup UI (HTML/CSS/JS, no framework, no bundler)
-  dev-mock.js        fake backend to work on the UI in a normal browser (not used by the app)
-src-tauri/src/
-  device.rs          what each model supports, read from its status
-  state.rs           device state and the actions that become API commands
-  sync.rs            status polling, optimistic commands, rate limiting
-  session.rs         OAuth (with refresh) and PAT, login window
-  auth.rs, api.rs    SmartThings OAuth and REST clients
-  secrets.rs         Windows Credential Manager
-  tray.rs, popup.rs  tray icon/menu and the popup window
-  icon.rs            draws the temperature on the tray icon
-docs/                API notes and the OAuth app template
+ControleDoAr/
+├── src/                    # interface do controle (HTML, CSS e JS, sem framework nem bundler)
+│   └── dev-mock.js         # backend falso para mexer na interface no navegador
+├── src-tauri/
+│   ├── src/
+│   │   ├── device.rs       # o que cada modelo suporta, lido do status
+│   │   ├── state.rs        # estado do aparelho e as ações que viram comandos da API
+│   │   ├── sync.rs         # atualização do status, comandos imediatos e limite de requisições
+│   │   ├── session.rs      # OAuth (com renovação), PAT e janela de login
+│   │   ├── auth.rs         # cliente OAuth da SmartThings
+│   │   ├── api.rs          # cliente REST da SmartThings
+│   │   ├── secrets.rs      # Gerenciador de Credenciais do Windows
+│   │   ├── tray.rs         # ícone e menu da bandeja
+│   │   ├── popup.rs        # janela do controle
+│   │   └── icon.rs         # desenha a temperatura no ícone da bandeja
+│   └── tests/fixtures/     # status real de um aparelho, para os testes
+├── docs/                   # notas da API, modelo do app OAuth e prints
+├── .env.example            # modelo do .env com as credenciais do app OAuth
+├── LICENSE
+└── README.md
 ```
 
-Tests: `cargo test --manifest-path src-tauri/Cargo.toml` (includes a sanitized real device status in `src-tauri/tests/fixtures`).
+## Créditos
 
-To work on the UI without the app, serve `src/` with any static server and open `index.html`. Add `?off`, `?simple` (a °F model without fan/WindFree) or `?login` to the URL to see other states.
+Não é afiliado à Samsung. SmartThings é uma marca da Samsung Electronics.
 
-## Limitations
+Ícones baseados no [Lucide](https://lucide.dev) (licença ISC). Desenvolvido com o auxílio do [Claude](https://claude.ai) (Anthropic).
 
-- The display light and beep state can't be read through the API on some models, so they are buttons ("turn off" / "turn on"), not switches.
-- Google sign-in doesn't work inside embedded windows; use the "sign in with the browser" option.
-- Windows only (tray, Credential Manager and window placement are Windows-specific).
+## Licença
 
-## Credits and license
+[MIT](LICENSE): use, modifique e distribua à vontade.
 
-Not affiliated with Samsung. SmartThings is a trademark of Samsung Electronics.
-Icons based on [Lucide](https://lucide.dev) (ISC). Code under the [MIT License](LICENSE).
-
----
-
-## Português
-
-Controle remoto do ar-condicionado Samsung na bandeja do Windows, usando a API oficial da SmartThings.
-
-- **Ícone na bandeja** com a temperatura alvo, na cor do modo.
-- **Clique esquerdo:** um controle no estilo do app SmartThings: ligar, modo, temperatura, intensidade e direção do vento, WindFree, Silencioso e Máx. (rápido).
-- **Clique direito:** menu rápido com ligar, temperatura ±, modo, modo noite e acender/apagar a luz do display.
-- **Luz do display** e **modo noite** (luz apagada, bipe mudo e WindFree) num clique.
-- **Se adapta a cada modelo:** modos, velocidades, faixa e unidade de temperatura vêm do próprio aparelho. Dá para escolher entre vários ares da conta.
-- Login OAuth numa janela do próprio app (anônima). Os tokens ficam no **Gerenciador de Credenciais do Windows** e são renovados sozinhos.
-- Interface em português ou inglês, conforme o idioma do Windows.
-
-**Para compilar:** siga a seção [Build it yourself](#build-it-yourself). Crie o seu app OAuth com a SmartThings CLI usando `docs/smartthings-app.json` (troque o `appName`), copie `.env.example` para `.env` com o Client ID e o Client Secret, e rode `npm install` e `npm run build`. Sem o app OAuth, o login aceita um token pessoal (PAT), que expira em 24h.
-
-Não publique instaladores gerados com o seu client secret: ele pode ser extraído do executável.
+<div align="center">
+<sub>Feito por <a href="https://github.com/erickfuzer">Erick Fuzer</a></sub>
+</div>
