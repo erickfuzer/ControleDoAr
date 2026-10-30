@@ -54,8 +54,7 @@ export component RoundButton inherits Rectangle {
     width: 26px;
     height: 26px;
     border-radius: 13px;
-    background: ta.pressed ? Theme.blue.brighter(15%) : Theme.blue;
-    opacity: dim ? 0.55 : 1;
+    background: dim ? Theme.blue.mix(Theme.tile, 0.55) : ta.pressed ? Theme.blue.brighter(15%) : Theme.blue;
     accessible-role: button;
     accessible-label: label;
     accessible-action-default => { root.clicked(); }
@@ -238,8 +237,7 @@ export component IconTile inherits Rectangle {
                 source: root.icon;
                 width: 30px;
                 height: 30px;
-                colorize: Theme.blue;
-                opacity: root.dim ? 0.55 : 1;
+                colorize: root.dim ? Theme.blue.mix(Theme.tile, 0.55) : Theme.blue;
             }
         }
         Text {
@@ -300,8 +298,7 @@ export component TempSlider inherits Rectangle {
         width: thumb / 2 + (root.width - thumb) * fraction;
         height: 8px;
         border-radius: 4px;
-        background: Theme.blue;
-        opacity: root.dim ? 0.55 : 1;
+        background: root.dim ? Theme.blue.mix(Theme.tile, 0.55) : Theme.blue;
     }
     Rectangle {
         x: (root.width - thumb) * fraction;
@@ -309,8 +306,7 @@ export component TempSlider inherits Rectangle {
         width: thumb;
         height: thumb;
         border-radius: thumb / 2;
-        background: Theme.blue;
-        opacity: root.dim ? 0.55 : 1;
+        background: root.dim ? Theme.blue.mix(Theme.tile, 0.55) : Theme.blue;
         drop-shadow-blur: 4px;
         drop-shadow-color: #00000059;
         drop-shadow-offset-y: 1px;

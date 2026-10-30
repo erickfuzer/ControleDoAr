@@ -7,7 +7,7 @@ use crate::core::{AuthMethod, Conn, Core, Snapshot};
 use crate::device::{Control, Features};
 use crate::i18n::{self, tr};
 use crate::state::Action;
-use crate::{icon, login, secrets, session, sync, window, winutil};
+use crate::{hero, icon, login, secrets, session, sync, window, winutil};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
 use std::cell::{Cell, RefCell};
 use std::rc::{Rc, Weak};
@@ -50,6 +50,8 @@ pub struct Ui {
     tick: slint::Timer,
     /// Último ícone desenhado (ligado, modo, temperatura), para não recriar à toa.
     tray_key: RefCell<Option<(bool, String, Option<i64>)>>,
+    /// Fundo do banner já desenhado (modo, largura e altura em pixels físicos).
+    hero_key: RefCell<Option<(String, u32, u32)>>,
 }
 
 /// Cria a interface, liga os eventos e começa a sincronizar.
@@ -72,6 +74,7 @@ pub fn start(core: Arc<Core>, show_event: isize) -> Result<(), slint::PlatformEr
         flash_timer: slint::Timer::default(),
         tick: slint::Timer::default(),
         tray_key: RefCell::new(None),
+        hero_key: RefCell::new(None),
     });
     UI.with(|u| *u.borrow_mut() = Some(ui.clone()));
     wire(&ui);
@@ -344,6 +347,8 @@ impl Ui {
             self.popup.set_view("main".into());
         }
         window::show(&self.popup, anchor);
+        // A escala pode mudar de um monitor para outro: redesenha o fundo do banner se preciso.
+        self.render();
         let stale = self
             .core
             .inner
@@ -658,6 +663,9 @@ impl Ui {
         let on = s.power && s.online;
         p.set_on(on);
         p.set_mode(s.mode.clone().into());
+        if on {
+            self.render_hero(&s.mode);
+        }
 
         // Banner
         let (title, temp, humidity) = if !s.online {
@@ -747,6 +755,22 @@ impl Ui {
             }
             .into(),
         );
+    }
+
+    fn render_hero(&self, mode: &str) {
+        let scale = self.popup.window().scale_factor();
+        let (w, h) = (
+            (hero::WIDTH * scale).round() as u32,
+            (hero::HEIGHT * scale).round() as u32,
+        );
+        let key = (mode.to_string(), w, h);
+        if self.hero_key.borrow().as_ref() == Some(&key) {
+            return;
+        }
+        let rgba = hero::render(w, h, scale, mode);
+        let buf = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(&rgba, w, h);
+        self.popup.set_hero_bg(slint::Image::from_rgba8(buf));
+        *self.hero_key.borrow_mut() = Some(key);
     }
 
     fn render_status(&self, snap: &Snapshot) {

@@ -6,7 +6,7 @@
 //! - `state`: estado do ar e as ações que viram comandos
 //! - `core`, `sync`, `session`: estado compartilhado, sincronização e credenciais
 //! - `login`: login pelo navegador com volta automática pela página-ponte
-//! - `ui`, `window`, `icon`: interface, posicionamento do popup e ícone da bandeja
+//! - `ui`, `window`, `icon`, `hero`: interface, posicionamento do popup, ícone da bandeja e fundo do banner
 //! - `secrets`, `config`, `winutil`: Gerenciador de Credenciais, configuração e APIs do Windows
 
 // Sem janela de console no build final.
@@ -17,6 +17,7 @@ mod auth;
 mod config;
 mod core;
 mod device;
+mod hero;
 mod i18n;
 mod icon;
 mod login;

@@ -246,33 +246,20 @@ component Panel inherits Rectangle {
 
 component Hero inherits Rectangle {
     in property <bool> on;
-    in property <string> mode;
+    in property <image> bg;
     in property <string> title;
     in property <string> temp;
     in property <string> humidity;
     callback power;
-    property <color> c1: mode == "heat" ? #d8505a : mode == "dry" ? #2f8a8f : mode == "wind" ? #3d8a52 : mode == "auto" ? #6a52d1 : #5b5fd6;
-    property <color> c2: mode == "heat" ? #ec7c48 : mode == "dry" ? #3fb3a8 : mode == "wind" ? #5fb466 : mode == "auto" ? #8d68de : #4b8fe8;
-    property <color> c3: mode == "heat" ? #f5b45a : mode == "dry" ? #7dd6c0 : mode == "wind" ? #a3d47c : mode == "auto" ? #c58ae6 : #5cc6e3;
-    min-height: 84px;
+    // Ligado: imagem desenhada pelo app (degradê, ondas e cantos; ver src/hero.rs).
+    height: on ? 100px : 84px;
     border-radius: Theme.r-panel;
-    background: on ? @linear-gradient(105deg, c1 0%, c2 48%, c3 100%) : #2b2b2e;
-    clip: true;
-    if root.on: Path {
+    background: on ? transparent : #2b2b2e;
+    if root.on: Image {
+        source: root.bg;
         width: root.width;
         height: root.height;
-        viewbox-width: 360;
-        viewbox-height: 100;
-        fill: #ffffff17;
-        commands: "M0 70 C 80 40, 150 95, 230 60 S 330 30, 360 45 L 360 100 L 0 100 Z";
-    }
-    if root.on: Path {
-        width: root.width;
-        height: root.height;
-        viewbox-width: 360;
-        viewbox-height: 100;
-        fill: #ffffff17;
-        commands: "M0 85 C 90 60, 170 100, 250 78 S 330 60, 360 70 L 360 100 L 0 100 Z";
+        image-fit: fill;
     }
     HorizontalLayout {
         padding-left: 22px;
@@ -364,6 +351,7 @@ export component Popup inherits Window {
     // Estado do ar
     in property <bool> on;
     in property <string> mode: "cool";
+    in property <image> hero-bg;
     in property <string> hero-title;
     in property <string> hero-temp;
     in property <string> hero-humidity;
@@ -487,7 +475,7 @@ export component Popup inherits Window {
                             VerticalLayout {
                                 Hero {
                                     on: root.on;
-                                    mode: root.mode;
+                                    bg: root.hero-bg;
                                     title: root.hero-title;
                                     temp: root.hero-temp;
                                     humidity: root.hero-humidity;
@@ -532,14 +520,13 @@ export component Popup inherits Window {
                                             }
                                             HorizontalLayout {
                                                 spacing: 10px;
-                                                opacity: root.no-temp ? 0.35 : 1;
                                                 VerticalLayout {
                                                     alignment: end;
                                                     padding-bottom: 4px;
                                                     RoundButton {
                                                         icon: @image-url("icons/minus.svg");
                                                         label: Tr.s.temp-down;
-                                                        dim: !root.on;
+                                                        dim: !root.on || root.no-temp;
                                                         clicked => {
                                                             if !root.no-temp {
                                                                 root.temp-set(max(root.setpoint - root.temp-step, root.temp-min));
@@ -571,7 +558,7 @@ export component Popup inherits Window {
                                                         maximum: root.temp-max;
                                                         step: root.temp-step;
                                                         value <=> root.setpoint;
-                                                        dim: !root.on;
+                                                        dim: !root.on || root.no-temp;
                                                         label: Tr.s.set-temp;
                                                         moving(v) => { root.temp-preview(v); }
                                                         released(v) => {
@@ -587,7 +574,7 @@ export component Popup inherits Window {
                                                     RoundButton {
                                                         icon: @image-url("icons/plus.svg");
                                                         label: Tr.s.temp-up;
-                                                        dim: !root.on;
+                                                        dim: !root.on || root.no-temp;
                                                         clicked => {
                                                             if !root.no-temp {
                                                                 root.temp-set(min(root.setpoint + root.temp-step, root.temp-max));
