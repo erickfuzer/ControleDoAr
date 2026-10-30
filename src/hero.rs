@@ -84,6 +84,9 @@ fn wave_tops(wave: &[(f32, f32); 7], w: usize, h: usize) -> Vec<f32> {
 
 /// Imagem RGBA (alfa não pré-multiplicado) com `w` × `h` pixels físicos.
 pub fn render(w: u32, h: u32, scale: f32, mode: &str) -> Vec<u8> {
+    if w == 0 || h == 0 {
+        return Vec::new();
+    }
     let (wu, hu) = (w as usize, h as usize);
     let [c1, c2, c3] = colors(mode);
     let tops: Vec<Vec<f32>> = WAVES.iter().map(|wv| wave_tops(wv, wu, hu)).collect();

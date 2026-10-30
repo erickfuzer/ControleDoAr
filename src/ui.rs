@@ -425,10 +425,8 @@ impl Ui {
         let t = f.clamp_temp(t);
         self.pending_temp.set(Some(t));
         self.popup.set_setpoint(t as f32);
-        let weak = self.popup.as_weak();
         self.temp_timer
             .start(slint::TimerMode::SingleShot, TEMP_DEBOUNCE, move || {
-                let _ = weak;
                 with_ui(|u| {
                     let Some(value) = u.pending_temp.take() else { return };
                     if u.core.snapshot().state.is_some_and(|s| s.setpoint == value) {
@@ -765,6 +763,9 @@ impl Ui {
         );
         let key = (mode.to_string(), w, h);
         if self.hero_key.borrow().as_ref() == Some(&key) {
+            return;
+        }
+        if w == 0 || h == 0 {
             return;
         }
         let rgba = hero::render(w, h, scale, mode);

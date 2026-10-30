@@ -56,8 +56,10 @@ Section "Install"
 
   SetOutPath "$INSTDIR"
   File "..\target\release\${EXE}"
-  ; Sobra da versão 1 (Tauri).
+  ; Sobras da versão 1 (Tauri): o executável e o perfil do WebView2 (cache e cookies
+  ; da janela de login antiga), que a versão 2 não usa.
   Delete "$INSTDIR\arcond.exe"
+  RMDir /r "$LOCALAPPDATA\com.erick.arcond"
 
   WriteUninstaller "$INSTDIR\uninstall.exe"
   CreateShortCut "$SMPROGRAMS\${APP_NAME}.lnk" "$INSTDIR\${EXE}"
@@ -96,4 +98,5 @@ Section "Uninstall"
   nsExec::Exec '"$SYSDIR\cmdkey.exe" /delete:ControleDoAr/smartthings-pat'
   Pop $0
   RMDir /r "$APPDATA\com.erick.arcond"
+  RMDir /r "$LOCALAPPDATA\com.erick.arcond"
 SectionEnd

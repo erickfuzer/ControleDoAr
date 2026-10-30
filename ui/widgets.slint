@@ -263,6 +263,8 @@ export component TempSlider inherits Rectangle {
     in property <float> maximum: 30;
     in property <float> step: 1;
     in property <bool> dim;
+    // Sem temperatura (modo Ventilar): só mostra, não aceita arraste.
+    in property <bool> enabled: true;
     in property <string> label;
     in-out property <float> value: 24;
     // Durante o arraste (só mostra) e ao soltar (envia).
@@ -278,8 +280,17 @@ export component TempSlider inherits Rectangle {
     accessible-value-minimum: root.minimum;
     accessible-value-maximum: root.maximum;
     accessible-value-step: root.step;
-    accessible-action-increment => { root.released(min(root.value + root.step, root.maximum)); }
-    accessible-action-decrement => { root.released(max(root.value - root.step, root.minimum)); }
+    accessible-enabled: root.enabled;
+    accessible-action-increment => {
+        if root.enabled {
+            root.released(min(root.value + root.step, root.maximum));
+        }
+    }
+    accessible-action-decrement => {
+        if root.enabled {
+            root.released(max(root.value - root.step, root.minimum));
+        }
+    }
 
     function at(x: length) -> float {
         let raw = root.minimum + clamp((x - thumb / 2) / (root.width - thumb), 0, 1) * span;
@@ -312,6 +323,7 @@ export component TempSlider inherits Rectangle {
         drop-shadow-offset-y: 1px;
     }
     ta := TouchArea {
+        enabled: root.enabled;
         pointer-event(e) => {
             if e.kind == PointerEventKind.down {
                 root.value = root.at(self.mouse-x);
