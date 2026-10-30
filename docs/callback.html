@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
+  <title>Controle do Ar</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; color: #f4f4f6; }
+    body { display: grid; place-items: center; font: 15px/1.5 "Segoe UI", system-ui, sans-serif; text-align: center; }
+    main { max-width: 420px; padding: 24px; }
+    h1 { font-size: 20px; font-weight: 700; margin: 0 0 8px; }
+    p { color: #a3a3aa; margin: 0; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1 id="title"></h1>
+    <p id="text"></p>
+  </main>
+  <script>
+    // Ponte do login do Controle do Ar.
+    //
+    // A SmartThings só aceita endereços HTTPS para devolver o login (recusa http://localhost).
+    // Esta página recebe o código e o repassa ao app, que espera em 127.0.0.1 numa porta
+    // que ele mesmo escolheu e colocou no início do "state" ("<porta>.<aleatório>").
+    // Nada é enviado a outro lugar: só redireciona para o próprio computador.
+    (function () {
+      var pt = (navigator.language || "").toLowerCase().indexOf("pt") === 0;
+      var T = pt
+        ? { go: "Voltando para o Controle do Ar…", bad: "Link de login inválido", badText: "Abra o login de novo pelo app." }
+        : { go: "Returning to Air Remote…", bad: "Invalid login link", badText: "Start the login again from the app." };
+
+      var q = new URLSearchParams(location.search);
+      var state = q.get("state") || "";
+      var m = /^(\d{4,5})\.[A-Za-z0-9]{16,128}$/.exec(state);
+      var port = m ? Number(m[1]) : 0;
+
+      // Tira o código da barra de endereços e do histórico antes de qualquer coisa.
+      history.replaceState(null, "", location.pathname);
+
+      if (port < 1024 || port > 65535) {
+        document.getElementById("title").textContent = T.bad;
+        document.getElementById("text").textContent = T.badText;
+        return;
+      }
+
+      var out = new URLSearchParams();
+      ["code", "state", "error", "error_description"].forEach(function (k) {
+        if (q.has(k)) out.set(k, q.get(k));
+      });
+      document.getElementById("title").textContent = T.go;
+      location.replace("http://127.0.0.1:" + port + "/callback?" + out.toString());
+    })();
+  </script>
+</body>
+</html>
