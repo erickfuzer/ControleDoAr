@@ -35,7 +35,7 @@ Também pelo `execute`: `["mode/vs/0", {"x.com.samsung.da.options": ["Volume_Mut
 
 ## Outros modelos
 
-O app não assume um modelo: `src-tauri/src/device.rs` lê do status o que o aparelho suporta.
+O app não assume um modelo: `src/device.rs` lê do status o que o aparelho suporta.
 
 - Modos, velocidades e direções: `supported*` (ou `available*`, se a primeira vier vazia).
 - Faixa de temperatura: `coolingSetpointRange` ou `custom.thermostatSetpointControl`. A unidade vem do `unit` do setpoint (°C/°F).
@@ -43,7 +43,7 @@ O app não assume um modelo: `src-tauri/src/device.rs` lê do status o que o apa
   e **não** está em `custom.disabledCapabilities`; senão, o `execute` com opções OCF (como no modelo testado).
 - Funções que não aparecem no status (WindFree, limpeza, filtro, umidade...) ficam escondidas na interface.
 
-O status real do modelo testado (sem identificadores) está em `src-tauri/tests/fixtures/windfree-ar24.json`.
+O status real do modelo testado (sem identificadores) está em `tests/fixtures/windfree-ar24.json`.
 
 ## Pendente
 - Em quais modos o WindFree é aceito.
@@ -55,8 +55,13 @@ O status real do modelo testado (sem identificadores) está em `src-tauri/tests/
   `ARCOND_CLIENT_SECRET`) e entram no build pelo `build.rs`. O CI não usa esses segredos (compila sem OAuth).
 - O PAT "fine grained" **não** serve para a CLI gerenciar apps (403 "Fine grained scope token not supported");
   a CLI precisa do login no navegador.
-- Redirect URIs registradas: `http://localhost:47913/callback` e `https://httpbin.org/get`.
-  **A SmartThings recusa `http://localhost` no `/oauth/authorize` (HTTP 403)**, apesar de a CLI aceitar o cadastro.
-  Por isso o app usa `https://httpbin.org/get` e intercepta a navegação na janela de login, então o código não chega ao httpbin.
+- **A SmartThings recusa `http://localhost` no `/oauth/authorize` (HTTP 403)**, apesar de a CLI aceitar o cadastro.
+  Só endereços HTTPS funcionam. Os endereços que não estão cadastrados não são recusados nessa etapa (a resposta é 302
+  para o login), então só um login completo prova que um endereço novo foi aceito.
+- Versão 1: login numa janela WebView do app, interceptando o redirecionamento para `https://httpbin.org/get`.
+- Versão 2 (2026-10-30): login no navegador do sistema (funciona com conta Google). O app escuta em `127.0.0.1` numa
+  porta livre e põe o número dela no início do `state` (`"<porta>.<aleatório>"`). O redirecionamento cadastrado é
+  `https://erickfuzer.github.io/ControleDoAr/callback.html` (GitHub Pages, pasta `docs/`), que só repassa
+  `code`/`state` para `http://127.0.0.1:<porta>/callback`. O `httpbin.org/get` continua cadastrado para o modo manual.
 - Token: `POST https://api.smartthings.com/oauth/token` com Basic auth (client_id:secret).
   Access token dura 24h; refresh token é de uso único e expira em ~29 dias sem uso.

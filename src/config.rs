@@ -27,6 +27,14 @@ impl Config {
     }
 }
 
+/// `%APPDATA%\com.erick.arcond\config.json`, o mesmo caminho da versão 1 (mantém o aparelho escolhido).
+pub fn default_path() -> PathBuf {
+    let base = std::env::var_os("APPDATA")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("."));
+    base.join("com.erick.arcond").join("config.json")
+}
+
 /// Só em desenvolvimento: PAT de `SMARTTHINGS_PAT` ou do `.env` na raiz do projeto.
 pub fn dev_token() -> Option<String> {
     if !cfg!(debug_assertions) {
@@ -35,7 +43,7 @@ pub fn dev_token() -> Option<String> {
     if let Ok(t) = std::env::var("SMARTTHINGS_PAT") {
         return Some(t);
     }
-    let env = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.env");
+    let env = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".env");
     std::fs::read_to_string(env)
         .ok()?
         .lines()

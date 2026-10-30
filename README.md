@@ -5,8 +5,7 @@
 Controle remoto do ar-condicionado **Samsung** na bandeja do Windows, usando a API oficial da **SmartThings**. Um clique no ícone e o controle aparece ao lado dele, mais rápido que pegar o celular.
 
 ![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)
-![Tauri](https://img.shields.io/badge/Tauri-24C8DB?style=for-the-badge&logo=tauri&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+![Slint](https://img.shields.io/badge/Slint-2379F4?style=for-the-badge&logo=slint&logoColor=white)
 ![SmartThings](https://img.shields.io/badge/SmartThings-15BFFF?style=for-the-badge&logo=smartthings&logoColor=white)
 ![Windows](https://img.shields.io/badge/Windows_10_e_11-0078D4?style=for-the-badge)
 
@@ -31,11 +30,13 @@ Controle remoto do ar-condicionado **Samsung** na bandeja do Windows, usando a A
 - **Vários aparelhos:** se a conta tiver mais de um ar, você escolhe qual controlar nas configurações
 - **Resposta imediata:** a mudança aparece na hora e é desfeita se a nuvem recusar. O estado atualiza a cada minuto, e o app espera sozinho quando bate no limite de requisições da API
 - **Português ou inglês**, conforme o idioma do Windows
-- **Leve:** alguns MB de Rust mais o WebView2 do sistema, sem Electron
+- **Leve de verdade:** interface nativa em [Slint](https://slint.dev), sem WebView nem Electron. Cerca de 5 MB de memória com o controle fechado e 6 MB com ele aberto, num processo só
 
 ## Como funciona
 
-O app conversa com a `api.smartthings.com` usando a sua conta SmartThings. O login é feito por OAuth numa janela do próprio app, que é anônima e não guarda nada depois de fechada. Os tokens ficam no **Gerenciador de Credenciais do Windows** e são renovados automaticamente. Também dá para entrar com um token pessoal (PAT).
+O app conversa com a `api.smartthings.com` usando a sua conta SmartThings. O login é feito por OAuth no seu navegador (funciona com conta Google) e volta sozinho para o app por uma [página-ponte](docs/callback.html) no GitHub Pages. Os tokens ficam no **Gerenciador de Credenciais do Windows** e são renovados automaticamente. Também dá para entrar com um token pessoal (PAT).
+
+A interface é desenhada em [Slint](https://slint.dev) com renderização por software, sem placa de vídeo nem navegador embutido. O ícone da bandeja é desenhado pelo próprio app no tamanho exato que o Windows usa.
 
 Tudo o que o controle mostra vem do status do aparelho (`supportedAcModes`, `supportedAcFanModes`, faixa do setpoint, `custom.disabledCapabilities` etc.). Para a luz do display e o bipe, o app usa a capability do próprio modelo quando ela está ativa e, quando não está, o comando OCF `execute`, o mesmo que o app da Samsung usa. As descobertas sobre a API, incluindo algumas surpresas, estão em [docs/API-NOTES.md](docs/API-NOTES.md).
 
@@ -45,11 +46,11 @@ Testado num Samsung WindFree 2024 (`DA-AC-RAC-01001`). Outros modelos Samsung qu
 
 Não há instaladores prontos para baixar: o app OAuth carrega um client secret, então cada pessoa compila com o seu.
 
-**Requisitos:** Windows 10 ou 11, [Rust](https://rustup.rs), [Node.js](https://nodejs.org) 20 ou mais novo e o runtime do WebView2 (já vem no Windows 11).
+**Requisitos:** Windows 10 ou 11, [Rust](https://rustup.rs) 1.92 ou mais novo e, para gerar o instalador, o [NSIS](https://nsis.sourceforge.io) (`winget install NSIS.NSIS`).
 
 ### 1. Crie o seu app OAuth na SmartThings (só uma vez)
 
-Instale a SmartThings CLI:
+Instale a [SmartThings CLI](https://github.com/SmartThingsCommunity/smartthings-cli) (pelo instalador das releases dela ou, se tiver o Node.js, com o npm):
 
 ```bash
 npm install -g @smartthings/cli
@@ -64,54 +65,57 @@ smartthings apps:create -i docs/smartthings-app.json
 A CLI abre o navegador para você entrar na conta e mostra um **OAuth Client Id** e um **Client Secret**. Copie o `.env.example` para `.env` e preencha os dois valores. O `.env` é ignorado pelo Git e deve continuar assim.
 
 > [!NOTE]
-> **Por que o redirecionamento é o httpbin:** a SmartThings recusa redirecionamentos para `http://localhost`, então o app usa `https://httpbin.org/get`. Ele intercepta esse redirecionamento dentro da própria janela de login, e o código de autorização nunca chega ao httpbin. Já no login pelo navegador (necessário para entrar com a conta Google), a página só mostra o código para você colar no app.
+> **Por que existe uma página-ponte:** a SmartThings recusa redirecionamentos para `http://localhost` e só aceita endereços HTTPS. O app então escuta numa porta livre do próprio PC, coloca o número dela no início do `state` do login, e a SmartThings devolve o login para [`docs/callback.html`](docs/callback.html), que só repassa o código para `127.0.0.1` nessa porta. O app confere o `state` inteiro antes de usar o código.
+>
+> O modelo já cadastra a ponte deste repositório, que funciona para qualquer um. Se preferir a sua, publique o `docs/` do seu fork no GitHub Pages, cadastre o endereço no app OAuth e coloque `ARCOND_REDIRECT_URI` no `.env`. O `https://httpbin.org/get` fica cadastrado como plano B: nesse modo a página só mostra o código para você colar no app.
 
 Também dá para pular este passo: sem o app OAuth, o login pede um [token pessoal (PAT)](https://account.smartthings.com/tokens), que expira em 24 horas.
 
 ### 2. Rode ou gere o instalador
 
 ```bash
-npm install
-npm run dev     # desenvolvimento, com a interface recarregando sozinha
-npm run build   # instalador em src-tauri/target/release/bundle/nsis/
+cargo run                                                  # desenvolvimento
+powershell -ExecutionPolicy Bypass -File installeruild.ps1   # instalador em dist/
 ```
 
-O instalador é por usuário (não pede administrador) e baixa o WebView2 se o PC não tiver. Ele não tem assinatura digital, então o SmartScreen do Windows avisa na primeira vez.
+O instalador é por usuário (não pede administrador) e substitui a versão 1 sem deixar sobras. Ao desinstalar, ele também apaga o login guardado e a configuração. Ele não tem assinatura digital, então o SmartScreen do Windows avisa na primeira vez.
 
 > [!WARNING]
 > **Não publique instaladores gerados com o seu client secret.** Qualquer pessoa conseguiria extraí-lo do executável. Sozinho ele não dá acesso a nenhuma conta, mas deixa outras pessoas usarem a cota de instalações do seu app OAuth.
 
 ### Para desenvolver
 
-- **Testes:** `cargo test --manifest-path src-tauri/Cargo.toml`. Incluem o status real de um aparelho, sem identificadores, em `src-tauri/tests/fixtures`.
-- **Só a interface:** sirva a pasta `src/` com qualquer servidor estático e abra o `index.html`. Ele usa um backend falso (`dev-mock.js`). Adicione `?off`, `?simple` (modelo em °F sem vento nem WindFree) ou `?login` na URL para ver outros estados.
+- **Testes:** `cargo test`. Incluem o status real de um aparelho, sem identificadores, em `tests/fixtures`.
+- **Interface:** os arquivos `.slint` ficam em `ui/`. A [extensão do Slint para o VS Code](https://marketplace.visualstudio.com/items?itemName=Slint.slint) mostra uma prévia ao vivo enquanto você edita.
+- **Abrir o controle ao iniciar:** no build de desenvolvimento, `ARCOND_OPEN=1 cargo run` já abre o popup, sem precisar clicar na bandeja.
 
 ## Limitações
 
 - Em alguns modelos a API não informa o estado da luz do display e do bipe, então eles aparecem como botões (como o "Acender/apagar" da luz), não como interruptores.
-- O login com a conta Google não funciona em janelas embutidas. Use a opção de entrar pelo navegador.
 - Só funciona no Windows: a bandeja, o Gerenciador de Credenciais e o posicionamento da janela são específicos dele.
 
 ## Estrutura
 
 ```
 ControleDoAr/
-├── src/                    # interface do controle (HTML, CSS e JS, sem framework nem bundler)
-│   └── dev-mock.js         # backend falso para mexer na interface no navegador
-├── src-tauri/
-│   ├── src/
-│   │   ├── device.rs       # o que cada modelo suporta, lido do status
-│   │   ├── state.rs        # estado do aparelho e as ações que viram comandos da API
-│   │   ├── sync.rs         # atualização do status, comandos imediatos e limite de requisições
-│   │   ├── session.rs      # OAuth (com renovação), PAT e janela de login
-│   │   ├── auth.rs         # cliente OAuth da SmartThings
-│   │   ├── api.rs          # cliente REST da SmartThings
-│   │   ├── secrets.rs      # Gerenciador de Credenciais do Windows
-│   │   ├── tray.rs         # ícone e menu da bandeja
-│   │   ├── popup.rs        # janela do controle
-│   │   └── icon.rs         # desenha a temperatura no ícone da bandeja
-│   └── tests/fixtures/     # status real de um aparelho, para os testes
-├── docs/                   # notas da API, modelo do app OAuth e prints
+├── src/
+│   ├── main.rs             # início: uma cópia só, runtime e interface
+│   ├── ui.rs               # liga a interface ao estado: desenha e transforma cliques em ações
+│   ├── window.rs           # posiciona o controle ao lado da bandeja e esconde ao perder o foco
+│   ├── device.rs           # o que cada modelo suporta, lido do status
+│   ├── state.rs            # estado do aparelho e as ações que viram comandos da API
+│   ├── core.rs             # estado compartilhado entre a interface e a rede
+│   ├── sync.rs             # atualização do status, comandos imediatos e limite de requisições
+│   ├── session.rs          # OAuth (com renovação) e PAT
+│   ├── login.rs            # login pelo navegador com volta pela página-ponte
+│   ├── auth.rs, api.rs     # clientes OAuth e REST da SmartThings
+│   ├── secrets.rs          # Gerenciador de Credenciais do Windows
+│   ├── winutil.rs          # APIs do Windows (uma cópia só, tela, iniciar com o Windows)
+│   └── icon.rs             # desenha a temperatura no ícone da bandeja
+├── ui/                     # interface em Slint e ícones
+├── installer/              # script do instalador (NSIS) e build.ps1
+├── tests/fixtures/         # status real de um aparelho, para os testes
+├── docs/                   # notas da API, página-ponte do login, modelo do app OAuth e prints
 ├── .env.example            # modelo do .env com as credenciais do app OAuth
 ├── LICENSE
 └── README.md
@@ -121,7 +125,7 @@ ControleDoAr/
 
 Não é afiliado à Samsung. SmartThings é uma marca da Samsung Electronics.
 
-Ícones baseados no [Lucide](https://lucide.dev) (licença ISC). Desenvolvido com o auxílio do [Claude](https://claude.ai) (Anthropic).
+Interface feita com [Slint](https://slint.dev) (#MadeWithSlint), sob a licença [Royalty-free](https://slint.dev/terms-and-conditions), que pede o crédito mostrado na tela "Sobre" do app. Ícones baseados no [Lucide](https://lucide.dev) (licença ISC). Desenvolvido com o auxílio do [Claude](https://claude.ai) (Anthropic).
 
 ## Licença
 

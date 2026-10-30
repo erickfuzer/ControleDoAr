@@ -8,9 +8,15 @@ use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// A SmartThings só aceita redirecionamento HTTPS (recusa http://localhost com 403).
-/// No login dentro do app a navegação para cá é interceptada antes de sair do app;
-/// no modo manual (navegador do sistema) a página mostra o código para o usuário colar.
-pub const REDIRECT_URI: &str = "https://httpbin.org/get";
+/// O login normal volta por uma página-ponte (docs/callback.html, no GitHub Pages) que repassa
+/// o código ao app em 127.0.0.1. Quem fizer um fork pode apontar para a própria página com
+/// `ARCOND_REDIRECT_URI` no build.
+pub const BRIDGE_REDIRECT: &str = match option_env!("ARCOND_REDIRECT_URI") {
+    Some(uri) => uri,
+    None => "https://erickfuzer.github.io/ControleDoAr/callback.html",
+};
+/// Plano B: a página do httpbin mostra o código na tela e o usuário cola no app.
+pub const MANUAL_REDIRECT: &str = "https://httpbin.org/get";
 const SCOPES: &str = "r:devices:* x:devices:* r:locations:*";
 const AUTHORIZE_URL: &str = "https://api.smartthings.com/oauth/authorize";
 const TOKEN_URL: &str = "https://api.smartthings.com/oauth/token";
@@ -171,11 +177,6 @@ pub async fn refresh(http: &reqwest::Client, app: &OAuthApp, refresh_token: &str
     .await
 }
 
-/// A navegação é exatamente o redirecionamento cadastrado (https://httpbin.org/get)?
-pub fn is_redirect(u: &reqwest::Url) -> bool {
-    u.scheme() == "https" && u.host_str() == Some("httpbin.org") && u.path() == "/get"
-}
-
 /// Lê o código do endereço de redirecionamento, conferindo o `state`.
 pub fn code_from_redirect(url: &str, state: &str) -> Result<String, String> {
     let params: HashMap<String, String> = reqwest::Url::parse(url)
@@ -215,15 +216,6 @@ pub fn extract_code(input: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::{code_from_redirect, extract_code};
-
-    #[test]
-    fn so_intercepta_o_redirecionamento_exato() {
-        let u = |s: &str| reqwest::Url::parse(s).unwrap();
-        assert!(super::is_redirect(&u("https://httpbin.org/get?code=x&state=y")));
-        assert!(!super::is_redirect(&u("http://httpbin.org/get?code=x")));
-        assert!(!super::is_redirect(&u("https://httpbin.org.evil.com/get?code=x")));
-        assert!(!super::is_redirect(&u("https://httpbin.org/get-outra?code=x")));
-    }
 
     #[test]
     fn le_redirecionamento() {

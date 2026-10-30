@@ -2,27 +2,27 @@
 //! e respeito ao limite de requisições da SmartThings.
 
 use crate::api::ApiError;
+use crate::core::{now_ms, Conn, Core};
 use crate::device::{Control, Features};
 use crate::i18n::tr;
 use crate::session::{has_credentials, with_token};
 use crate::state::{AcState, Action};
-use crate::{now_ms, publish, shared, Conn};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tauri::AppHandle;
 
 /// O health (online/offline) muda pouco; não precisa ir junto em todo refresh.
 const HEALTH_INTERVAL: Duration = Duration::from_secs(300);
 /// Depois de um comando, a nuvem demora 1–2 s para refletir o novo estado.
 pub const SETTLE_DELAY: Duration = Duration::from_secs(4);
 
-pub fn set_conn(app: &AppHandle, conn: Conn, message: Option<String>) {
+pub fn set_conn(core: &Arc<Core>, conn: Conn, message: Option<String>) {
     {
-        let s = shared(app);
+        let s = core;
         let mut i = s.inner.lock().unwrap();
         i.conn = Some(conn);
         i.message = message;
     }
-    publish(app);
+    core.publish();
 }
 
 fn error_conn(e: &ApiError) -> Conn {
@@ -35,35 +35,35 @@ fn error_conn(e: &ApiError) -> Conn {
 }
 
 /// Registra o erro; num 429 bloqueia novas requisições pelo tempo pedido.
-fn report_error(app: &AppHandle, e: &ApiError, message: String) {
+fn report_error(core: &Arc<Core>, e: &ApiError, message: String) {
     {
-        let s = shared(app);
+        let s = core;
         let mut i = s.inner.lock().unwrap();
         if let ApiError::RateLimited(secs) = e {
             i.blocked_until = Some(Instant::now() + Duration::from_secs(*secs));
-            refresh_after_block(app, *secs);
+            refresh_after_block(core, *secs);
         }
         i.conn = Some(error_conn(e));
         i.message = Some(message);
     }
-    publish(app);
+    core.publish();
 }
 
 /// Quando o bloqueio do 429 acabar, busca o status de novo (e limpa o aviso).
-fn refresh_after_block(app: &AppHandle, secs: u64) {
-    let app = app.clone();
-    tauri::async_runtime::spawn(async move {
+fn refresh_after_block(core: &Arc<Core>, secs: u64) {
+    let core = core.clone();
+    tokio::spawn(async move {
         tokio::time::sleep(Duration::from_secs(secs) + Duration::from_millis(300)).await;
-        refresh(&app, true).await;
+        refresh(&core, true).await;
     });
 }
 
 /// Garante que há um aparelho escolhido: o configurado ou o primeiro ar-condicionado da conta.
-async fn ensure_device(app: &AppHandle) -> Result<String, ApiError> {
-    let s = shared(app);
+async fn ensure_device(core: &Arc<Core>) -> Result<String, ApiError> {
+    let s = core;
     let configured = s.inner.lock().unwrap().cfg.device_id.clone();
     let client = s.client.clone();
-    let devices = with_token(app, |t| {
+    let devices = with_token(core, |t| {
         let c = client.clone();
         async move { c.devices(&t).await }
     })
@@ -87,7 +87,7 @@ async fn ensure_device(app: &AppHandle) -> Result<String, ApiError> {
     let place = match dev.location_id.clone() {
         Some(loc) => {
             let room = dev.room_id.clone();
-            with_token(app, |t| {
+            with_token(core, |t| {
                 let (c, l, r) = (client.clone(), loc.clone(), room.clone());
                 async move { c.place(&t, &l, r.as_deref()).await }
             })
@@ -107,8 +107,8 @@ async fn ensure_device(app: &AppHandle) -> Result<String, ApiError> {
     Ok(dev.id)
 }
 
-pub async fn refresh(app: &AppHandle, force: bool) {
-    let s = shared(app);
+pub async fn refresh(core: &Arc<Core>, force: bool) {
+    let s = core;
     let (device, has_label, recent_cmd, blocked, health) = {
         let i = s.inner.lock().unwrap();
         (
@@ -123,19 +123,19 @@ pub async fn refresh(app: &AppHandle, force: bool) {
     if (recent_cmd && !force) || blocked {
         return;
     }
-    if !has_credentials(app) {
-        set_conn(app, Conn::NoToken, None);
+    if !has_credentials(core) {
+        set_conn(core, Conn::NoToken, None);
         return;
     }
     let device = match device.filter(|_| has_label) {
         Some(d) => d,
-        None => match ensure_device(app).await {
+        None => match ensure_device(core).await {
             Ok(d) => d,
-            Err(e) => return report_error(app, &e, e.to_string()),
+            Err(e) => return report_error(core, &e, e.to_string()),
         },
     };
     let client = s.client.clone();
-    let status = with_token(app, |t| {
+    let status = with_token(core, |t| {
         let (c, d) = (client.clone(), device.clone());
         async move { c.status(&t, &d).await }
     })
@@ -143,7 +143,7 @@ pub async fn refresh(app: &AppHandle, force: bool) {
     let health = match (health, &status) {
         (Some(h), _) => Ok(h),
         (None, Ok(_)) => {
-            with_token(app, |t| {
+            with_token(core, |t| {
                 let (c, d) = (client.clone(), device.clone());
                 async move { c.health(&t, &d).await }
             })
@@ -182,15 +182,15 @@ pub async fn refresh(app: &AppHandle, force: bool) {
                 i.updated_at = Some(now_ms());
                 i.last_refresh = Some(Instant::now());
             }
-            publish(app);
+            core.publish();
         }
-        Err(e) => report_error(app, &e, e.to_string()),
+        Err(e) => report_error(core, &e, e.to_string()),
     }
 }
 
-pub async fn act(app: &AppHandle, action: Action) -> Result<(), String> {
-    let s = shared(app);
-    if !has_credentials(app) {
+pub async fn act(core: &Arc<Core>, action: Action) -> Result<(), String> {
+    let s = core;
+    if !has_credentials(core) {
         return Err(tr("Sem login", "Not signed in").into());
     }
     let (action, device, features, display_dark, prev, optimistic, gen) = {
@@ -213,7 +213,7 @@ pub async fn act(app: &AppHandle, action: Action) -> Result<(), String> {
             );
             i.message = Some(msg.clone());
             drop(i);
-            publish(app);
+            core.publish();
             return Err(msg);
         }
         i.cmd_gen += 1;
@@ -234,13 +234,13 @@ pub async fn act(app: &AppHandle, action: Action) -> Result<(), String> {
             i.cmd_gen,
         )
     };
-    publish(app);
+    core.publish();
 
     let client = s.client.clone();
     let batches = action.plan(&features, display_dark);
     let mut sent = Ok(());
     for commands in batches {
-        let r = with_token(app, |t| {
+        let r = with_token(core, |t| {
             let (c, d, cmds) = (client.clone(), device.clone(), commands.clone());
             async move { c.commands(&t, &d, cmds).await }
         })
@@ -268,18 +268,18 @@ pub async fn act(app: &AppHandle, action: Action) -> Result<(), String> {
                     _ => {}
                 }
             }
-            set_conn(app, Conn::Ok, None);
+            set_conn(core, Conn::Ok, None);
             // Luz e bipe não têm estado para conferir.
             if matches!(action, Action::Light(_) | Action::Beep(_)) {
                 return Ok(());
             }
             // Confere com a nuvem depois que ela assentar, uma vez só por rajada de cliques.
-            let app = app.clone();
-            tauri::async_runtime::spawn(async move {
+            let core = core.clone();
+            tokio::spawn(async move {
                 tokio::time::sleep(SETTLE_DELAY + Duration::from_millis(200)).await;
-                let latest = shared(&app).inner.lock().unwrap().cmd_gen == gen;
+                let latest = core.inner.lock().unwrap().cmd_gen == gen;
                 if latest {
-                    refresh(&app, false).await;
+                    refresh(&core, false).await;
                 }
             });
             Ok(())
@@ -294,7 +294,7 @@ pub async fn act(app: &AppHandle, action: Action) -> Result<(), String> {
                 }
                 if let ApiError::RateLimited(secs) = e {
                     i.blocked_until = Some(Instant::now() + Duration::from_secs(secs));
-                    refresh_after_block(app, secs);
+                    refresh_after_block(core, secs);
                 }
                 i.conn = Some(match e {
                     ApiError::Unauthorized => Conn::NoToken,
@@ -303,15 +303,8 @@ pub async fn act(app: &AppHandle, action: Action) -> Result<(), String> {
                 });
                 i.message = Some(msg.clone());
             }
-            publish(app);
+            core.publish();
             Err(msg)
         }
     }
-}
-
-pub fn spawn_act(app: &AppHandle, action: Action) {
-    let app = app.clone();
-    tauri::async_runtime::spawn(async move {
-        let _ = act(&app, action).await;
-    });
 }

@@ -1,0 +1,396 @@
+// Peças da interface, no estilo do app SmartThings / One UI (sem marcas da Samsung).
+
+export global Theme {
+    out property <color> bg: #000000;
+    out property <color> panel: #171719;
+    out property <color> tile: #252527;
+    out property <color> tile-press: #2f2f32;
+    out property <color> sheet: #232325;
+    out property <color> text: #f4f4f6;
+    out property <color> muted: #a3a3aa;
+    out property <color> faint: #6b6b72;
+    out property <color> line: #ffffff14;
+    out property <color> blue: #3e7cf6;
+    out property <color> blue-text: #5b93ff;
+    out property <color> track: #8e8e94;
+    out property <color> switch-off: #3b3b3f;
+    out property <color> ok: #4cc26f;
+    out property <color> warn: #f5b14c;
+    out property <color> err: #ff6b62;
+    out property <length> r-panel: 26px;
+    out property <length> r-tile: 18px;
+    out property <string> display-font: "Segoe UI Variable Display";
+}
+
+// Botão redondo só com ícone (⋮, voltar).
+export component IconButton inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    callback clicked;
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    background: ta.has-hover ? #ffffff14 : transparent;
+    accessible-role: button;
+    accessible-label: label;
+    accessible-action-default => { root.clicked(); }
+    Image {
+        source: root.icon;
+        width: 20px;
+        height: 20px;
+        colorize: Theme.text;
+    }
+    ta := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+// Botão azul pequeno e redondo (− / +) do slider.
+export component RoundButton inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    in property <bool> dim;
+    callback clicked;
+    width: 26px;
+    height: 26px;
+    border-radius: 13px;
+    background: ta.pressed ? Theme.blue.brighter(15%) : Theme.blue;
+    opacity: dim ? 0.55 : 1;
+    accessible-role: button;
+    accessible-label: label;
+    accessible-action-default => { root.clicked(); }
+    Image {
+        source: root.icon;
+        width: 18px;
+        height: 18px;
+        colorize: #0b0b0c;
+    }
+    ta := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+// Interruptor estilo One UI.
+export component Switch inherits Rectangle {
+    in property <bool> on;
+    width: 44px;
+    height: 24px;
+    border-radius: 12px;
+    background: on ? Theme.blue : Theme.switch-off;
+    animate background { duration: 150ms; }
+    Rectangle {
+        x: root.on ? 23px : 3px;
+        y: 3px;
+        width: 18px;
+        height: 18px;
+        border-radius: 9px;
+        background: root.on ? #ffffff : #e9e9ec;
+        animate x { duration: 150ms; easing: ease-out; }
+    }
+}
+
+// Botão em forma de pílula. `flash`: 0 normal, 1 deu certo, 2 deu errado.
+export component Pill inherits Rectangle {
+    in property <string> text;
+    in property <bool> accent;
+    in property <int> flash;
+    callback clicked;
+    height: 32px;
+    min-width: label.preferred-width + 28px;
+    border-radius: 16px;
+    background: flash == 1 ? Theme.ok : flash == 2 ? Theme.err : accent ? (ta.has-hover ? Theme.blue.brighter(8%) : Theme.blue) : (ta.has-hover ? Theme.tile-press : Theme.tile);
+    animate background { duration: 120ms; }
+    accessible-role: button;
+    accessible-label: text;
+    accessible-action-default => { root.clicked(); }
+    label := Text {
+        text: root.text;
+        color: root.flash != 0 ? #0b0b0c : root.accent ? #ffffff : Theme.text;
+        font-size: 13.5px;
+        font-weight: 600;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    ta := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+// Linha de lista: texto principal, texto menor opcional e um elemento à direita.
+export component Row inherits Rectangle {
+    in property <string> title;
+    in property <string> subtitle;
+    in property <color> title-color: Theme.text;
+    in property <bool> line;
+    in property <bool> clickable;
+    callback clicked;
+    min-height: 58px;
+    background: clickable && ta.has-hover ? #ffffff08 : transparent;
+    // Linhas clicáveis trocam o papel para `button` onde são usadas.
+    accessible-role: none;
+    accessible-label: title;
+    accessible-action-default => { root.clicked(); }
+    if root.line: Rectangle {
+        x: 22px;
+        y: 0;
+        width: root.width - 44px;
+        height: 1px;
+        background: Theme.line;
+    }
+    ta := TouchArea {
+        enabled: root.clickable;
+        clicked => { root.clicked(); }
+    }
+    HorizontalLayout {
+        padding-left: 22px;
+        padding-right: 22px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        spacing: 12px;
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            Text {
+                text: root.title;
+                color: root.title-color;
+                font-size: 16px;
+                font-weight: root.title-color == Theme.text ? 400 : 600;
+                wrap: word-wrap;
+            }
+            if root.subtitle != "": Text {
+                text: root.subtitle;
+                color: Theme.muted;
+                font-size: 13px;
+                wrap: word-wrap;
+            }
+        }
+        HorizontalLayout {
+            alignment: end;
+            VerticalLayout {
+                alignment: center;
+                @children
+            }
+        }
+    }
+}
+
+// Cartão com rótulo e valor (Modo).
+export component Tile inherits Rectangle {
+    in property <string> label;
+    in property <string> value;
+    in property <bool> dim;
+    callback clicked;
+    border-radius: Theme.r-tile;
+    background: ta.has-hover ? Theme.tile-press : Theme.tile;
+    accessible-role: button;
+    accessible-label: label + ": " + value;
+    accessible-action-default => { root.clicked(); }
+    ta := TouchArea {
+        clicked => { root.clicked(); }
+    }
+    VerticalLayout {
+        padding-left: 18px;
+        padding-right: 18px;
+        padding-top: 14px;
+        padding-bottom: 16px;
+        spacing: 4px;
+        Text {
+            text: root.label;
+            color: root.dim ? Theme.faint : Theme.muted;
+            font-size: 13.5px;
+        }
+        Text {
+            text: root.value;
+            color: root.dim ? Theme.faint : Theme.text;
+            font-family: Theme.display-font;
+            font-size: 19px;
+            font-weight: 700;
+        }
+    }
+}
+
+// Cartão com ícone, rótulo e valor (vento).
+export component IconTile inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    in property <string> value;
+    in property <bool> dim;
+    callback clicked;
+    border-radius: Theme.r-tile;
+    background: ta.has-hover ? Theme.tile-press : Theme.tile;
+    accessible-role: button;
+    accessible-label: label + ": " + value;
+    accessible-action-default => { root.clicked(); }
+    ta := TouchArea {
+        clicked => { root.clicked(); }
+    }
+    VerticalLayout {
+        padding-top: 14px;
+        padding-bottom: 16px;
+        padding-left: 8px;
+        padding-right: 8px;
+        spacing: 2px;
+        alignment: center;
+        HorizontalLayout {
+            alignment: center;
+            padding-bottom: 6px;
+            Image {
+                source: root.icon;
+                width: 30px;
+                height: 30px;
+                colorize: Theme.blue;
+                opacity: root.dim ? 0.55 : 1;
+            }
+        }
+        Text {
+            text: root.label;
+            color: root.dim ? Theme.faint : Theme.muted;
+            font-size: 12.5px;
+            horizontal-alignment: center;
+        }
+        Text {
+            text: root.value;
+            color: root.dim ? Theme.faint : Theme.text;
+            font-family: Theme.display-font;
+            font-size: 18px;
+            font-weight: 700;
+            horizontal-alignment: center;
+        }
+    }
+}
+
+// Slider de temperatura: trilho grosso, bolinha azul, valor arredondado ao passo.
+export component TempSlider inherits Rectangle {
+    in property <float> minimum: 16;
+    in property <float> maximum: 30;
+    in property <float> step: 1;
+    in property <bool> dim;
+    in property <string> label;
+    in-out property <float> value: 24;
+    // Durante o arraste (só mostra) e ao soltar (envia).
+    callback moving(float);
+    callback released(float);
+    height: 34px;
+    property <float> span: max(root.maximum - root.minimum, 0.001);
+    property <float> fraction: clamp((root.value - root.minimum) / span, 0, 1);
+    property <length> thumb: 30px;
+    accessible-role: slider;
+    accessible-label: label;
+    accessible-value: root.value;
+    accessible-value-minimum: root.minimum;
+    accessible-value-maximum: root.maximum;
+    accessible-value-step: root.step;
+    accessible-action-increment => { root.released(min(root.value + root.step, root.maximum)); }
+    accessible-action-decrement => { root.released(max(root.value - root.step, root.minimum)); }
+
+    function at(x: length) -> float {
+        let raw = root.minimum + clamp((x - thumb / 2) / (root.width - thumb), 0, 1) * span;
+        return clamp(root.minimum + round((raw - root.minimum) / root.step) * root.step, root.minimum, root.maximum);
+    }
+
+    Rectangle {
+        y: (root.height - 8px) / 2;
+        height: 8px;
+        border-radius: 4px;
+        background: root.dim ? #6b6b72 : Theme.track;
+    }
+    Rectangle {
+        x: 0;
+        y: (root.height - 8px) / 2;
+        width: thumb / 2 + (root.width - thumb) * fraction;
+        height: 8px;
+        border-radius: 4px;
+        background: Theme.blue;
+        opacity: root.dim ? 0.55 : 1;
+    }
+    Rectangle {
+        x: (root.width - thumb) * fraction;
+        y: (root.height - thumb) / 2;
+        width: thumb;
+        height: thumb;
+        border-radius: thumb / 2;
+        background: Theme.blue;
+        opacity: root.dim ? 0.55 : 1;
+        drop-shadow-blur: 4px;
+        drop-shadow-color: #00000059;
+        drop-shadow-offset-y: 1px;
+    }
+    ta := TouchArea {
+        pointer-event(e) => {
+            if e.kind == PointerEventKind.down {
+                root.value = root.at(self.mouse-x);
+                root.moving(root.value);
+            } else if e.kind == PointerEventKind.up {
+                root.released(root.value);
+            }
+        }
+        moved => {
+            if self.pressed {
+                root.value = root.at(self.mouse-x);
+                root.moving(root.value);
+            }
+        }
+    }
+}
+
+// Campo de texto arredondado.
+export component Field inherits Rectangle {
+    in property <string> placeholder;
+    in property <bool> password;
+    in-out property <string> text <=> input.text;
+    callback accepted(string);
+    height: 40px;
+    border-radius: 20px;
+    background: #0e0e10;
+    border-width: 1px;
+    border-color: input.has-focus ? Theme.blue : Theme.line;
+    accessible-role: text-input;
+    accessible-label: placeholder;
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        input := TextInput {
+            vertical-alignment: center;
+            color: Theme.text;
+            font-size: 14px;
+            single-line: true;
+            input-type: root.password ? InputType.password : InputType.text;
+            accepted => { root.accepted(self.text); }
+        }
+    }
+    if input.text == "": Text {
+        x: 14px;
+        text: root.placeholder;
+        color: Theme.faint;
+        font-size: 14px;
+        vertical-alignment: center;
+    }
+}
+
+// Botão grande (azul) ou secundário (cinza).
+export component BigButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> primary: true;
+    in property <bool> busy;
+    callback clicked;
+    height: 46px;
+    min-width: label.preferred-width + 36px;
+    border-radius: 23px;
+    background: primary ? (ta.has-hover ? Theme.blue.brighter(8%) : Theme.blue) : (ta.has-hover ? Theme.tile-press : Theme.tile);
+    opacity: busy ? 0.6 : 1;
+    accessible-role: button;
+    accessible-label: text;
+    accessible-action-default => { root.clicked(); }
+    label := Text {
+        text: root.text;
+        color: root.primary ? #ffffff : Theme.text;
+        font-size: 15px;
+        font-weight: 600;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    ta := TouchArea {
+        enabled: !root.busy;
+        clicked => { root.clicked(); }
+    }
+}

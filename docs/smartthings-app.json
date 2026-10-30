@@ -9,6 +9,9 @@
   "oauth": {
     "clientName": "Controle do Ar",
     "scope": ["r:devices:*", "x:devices:*", "r:locations:*"],
-    "redirectUris": ["https://httpbin.org/get"]
+    "redirectUris": [
+      "https://erickfuzer.github.io/ControleDoAr/callback.html",
+      "https://httpbin.org/get"
+    ]
   }
 }

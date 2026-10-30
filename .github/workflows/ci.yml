@@ -16,29 +16,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
 
       - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
 
-      - run: npm ci
-
-      - name: Format
-        run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+      - name: Formatação
+        run: cargo fmt --check
 
       - name: Clippy
-        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings
 
-      - name: Tests
-        run: cargo test --manifest-path src-tauri/Cargo.toml
+      - name: Testes
+        run: cargo test
 
-      - name: Build (sem instalador)
-        run: npx tauri build --no-bundle
+      - name: Build (release, sem instalador)
+        run: cargo build --release

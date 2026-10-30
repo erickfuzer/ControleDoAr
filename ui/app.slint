@@ -1,0 +1,1184 @@
+// Controle do Ar: popup da bandeja e ícone com menu.
+// O Rust preenche os textos (Tr), o estado do ar e reage aos callbacks.
+
+import { AboutSlint } from "std-widgets.slint";
+import { Theme, IconButton, RoundButton, Switch, Pill, Row, Tile, IconTile, TempSlider, Field, BigButton } from "widgets.slint";
+
+export struct SheetOption {
+    key: string,
+    label: string,
+    selected: bool,
+}
+
+export struct Strings {
+    app-name: string,
+    airconditioner: string,
+    off: string,
+    offline: string,
+    mode: string,
+    set-temp: string,
+    no-temp-in-fan: string,
+    fan-speed: string,
+    air-direction: string,
+    windfree: string,
+    speed: string,
+    quiet: string,
+    light: string,
+    light-toggle: string,
+    night: string,
+    activate: string,
+    cancel: string,
+    settings: string,
+    device: string,
+    account: string,
+    sign-in: string,
+    pat-expires: string,
+    sign-out: string,
+    beep: string,
+    beep-mute: string,
+    beep-on: string,
+    auto-clean: string,
+    filter: string,
+    autostart: string,
+    about: string,
+    about-text: string,
+    quit: string,
+    login-title: string,
+    login-text: string,
+    login-wait: string,
+    manual-fold: string,
+    manual-step1: string,
+    manual-step2: string,
+    open-browser: string,
+    paste-placeholder: string,
+    pat-fold: string,
+    token-placeholder: string,
+    ok: string,
+    power: string,
+    temp-down: string,
+    temp-up: string,
+    back: string,
+    more: string,
+    tray-open: string,
+    tray-temp-up: string,
+    tray-temp-down: string,
+    tray-night: string,
+    tray-light: string,
+    tray-quit: string,
+    mode-auto: string,
+    mode-cool: string,
+    mode-dry: string,
+    mode-wind: string,
+    mode-heat: string,
+}
+
+export global Tr {
+    in property <Strings> s;
+}
+
+// ---------- Ícone da bandeja ----------
+
+export component Tray inherits SystemTrayIcon {
+    in property <image> tray-icon;
+    in property <string> tray-tooltip;
+    in property <bool> loaded;
+    in property <string> power-text;
+    in property <string> temp-text;
+    in property <string> mode;
+    in property <[string]> modes;
+    in property <bool> night-enabled;
+    in property <bool> light-enabled;
+    callback open();
+    callback toggle-power();
+    callback temp-step(int);
+    callback set-mode(string);
+    callback night();
+    callback light();
+    callback quit();
+
+    icon: tray-icon;
+    tooltip: tray-tooltip;
+    clicked => { root.open(); }
+
+    pure function has(m: string) -> bool {
+        // [string] não tem "contains"; percorre na mão.
+        root.modes[0] == m || root.modes[1] == m || root.modes[2] == m || root.modes[3] == m || root.modes[4] == m
+    }
+
+    Menu {
+        MenuItem {
+            title: root.power-text;
+            enabled: root.loaded;
+            activated => { root.toggle-power(); }
+        }
+        MenuSeparator { }
+        MenuItem {
+            title: root.temp-text;
+            enabled: false;
+        }
+        MenuItem {
+            title: Tr.s.tray-temp-up;
+            enabled: root.loaded;
+            activated => { root.temp-step(1); }
+        }
+        MenuItem {
+            title: Tr.s.tray-temp-down;
+            enabled: root.loaded;
+            activated => { root.temp-step(-1); }
+        }
+        Menu {
+            title: Tr.s.mode;
+            MenuItem {
+                title: Tr.s.mode-auto;
+                checkable: true;
+                checked: root.mode == "auto";
+                enabled: root.loaded && root.has("auto");
+                activated => { root.set-mode("auto"); }
+            }
+            MenuItem {
+                title: Tr.s.mode-cool;
+                checkable: true;
+                checked: root.mode == "cool";
+                enabled: root.loaded && root.has("cool");
+                activated => { root.set-mode("cool"); }
+            }
+            MenuItem {
+                title: Tr.s.mode-dry;
+                checkable: true;
+                checked: root.mode == "dry";
+                enabled: root.loaded && root.has("dry");
+                activated => { root.set-mode("dry"); }
+            }
+            MenuItem {
+                title: Tr.s.mode-wind;
+                checkable: true;
+                checked: root.mode == "wind";
+                enabled: root.loaded && root.has("wind");
+                activated => { root.set-mode("wind"); }
+            }
+            MenuItem {
+                title: Tr.s.mode-heat;
+                checkable: true;
+                checked: root.mode == "heat";
+                enabled: root.loaded && root.has("heat");
+                activated => { root.set-mode("heat"); }
+            }
+        }
+        MenuSeparator { }
+        MenuItem {
+            title: Tr.s.tray-night;
+            enabled: root.loaded && root.night-enabled;
+            activated => { root.night(); }
+        }
+        MenuItem {
+            title: Tr.s.tray-light;
+            enabled: root.loaded && root.light-enabled;
+            activated => { root.light(); }
+        }
+        MenuSeparator { }
+        MenuItem {
+            title: Tr.s.tray-open;
+            activated => { root.open(); }
+        }
+        MenuItem {
+            title: Tr.s.tray-quit;
+            activated => { root.quit(); }
+        }
+    }
+}
+
+// ---------- Partes do popup ----------
+
+component Header inherits HorizontalLayout {
+    in property <string> title;
+    in property <string> subtitle;
+    in property <bool> back;
+    in property <bool> menu;
+    callback back-clicked;
+    callback menu-clicked;
+    padding-left: back ? 8px : 20px;
+    padding-right: 12px;
+    padding-top: 16px;
+    padding-bottom: 14px;
+    spacing: 6px;
+    if root.back: VerticalLayout {
+        alignment: center;
+        IconButton {
+            icon: @image-url("icons/back.svg");
+            label: Tr.s.back;
+            clicked => { root.back-clicked(); }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        horizontal-stretch: 1;
+        Text {
+            text: root.title;
+            color: Theme.text;
+            font-family: Theme.display-font;
+            font-size: 21px;
+            font-weight: 700;
+            overflow: elide;
+        }
+        if root.subtitle != "": Text {
+            text: root.subtitle;
+            color: Theme.muted;
+            font-size: 13.5px;
+            font-weight: 600;
+            overflow: elide;
+        }
+    }
+    if root.menu: VerticalLayout {
+        alignment: center;
+        IconButton {
+            icon: @image-url("icons/more.svg");
+            label: Tr.s.more;
+            clicked => { root.menu-clicked(); }
+        }
+    }
+}
+
+component Panel inherits Rectangle {
+    border-radius: Theme.r-panel;
+    background: Theme.panel;
+    clip: true;
+}
+
+component Hero inherits Rectangle {
+    in property <bool> on;
+    in property <string> mode;
+    in property <string> title;
+    in property <string> temp;
+    in property <string> humidity;
+    callback power;
+    property <color> c1: mode == "heat" ? #d8505a : mode == "dry" ? #2f8a8f : mode == "wind" ? #3d8a52 : mode == "auto" ? #6a52d1 : #5b5fd6;
+    property <color> c2: mode == "heat" ? #ec7c48 : mode == "dry" ? #3fb3a8 : mode == "wind" ? #5fb466 : mode == "auto" ? #8d68de : #4b8fe8;
+    property <color> c3: mode == "heat" ? #f5b45a : mode == "dry" ? #7dd6c0 : mode == "wind" ? #a3d47c : mode == "auto" ? #c58ae6 : #5cc6e3;
+    min-height: 84px;
+    border-radius: Theme.r-panel;
+    background: on ? @linear-gradient(105deg, c1 0%, c2 48%, c3 100%) : #2b2b2e;
+    clip: true;
+    if root.on: Path {
+        width: root.width;
+        height: root.height;
+        viewbox-width: 360;
+        viewbox-height: 100;
+        fill: #ffffff17;
+        commands: "M0 70 C 80 40, 150 95, 230 60 S 330 30, 360 45 L 360 100 L 0 100 Z";
+    }
+    if root.on: Path {
+        width: root.width;
+        height: root.height;
+        viewbox-width: 360;
+        viewbox-height: 100;
+        fill: #ffffff17;
+        commands: "M0 85 C 90 60, 170 100, 250 78 S 330 60, 360 70 L 360 100 L 0 100 Z";
+    }
+    HorizontalLayout {
+        padding-left: 22px;
+        padding-right: 16px;
+        padding-top: 16px;
+        padding-bottom: 16px;
+        spacing: 12px;
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            spacing: 6px;
+            Text {
+                text: root.title;
+                color: Theme.text;
+                font-family: Theme.display-font;
+                font-size: 18px;
+                font-weight: 700;
+            }
+            if root.temp != "": HorizontalLayout {
+                spacing: 8px;
+                alignment: start;
+                Text {
+                    text: root.temp;
+                    color: Theme.text;
+                    font-family: Theme.display-font;
+                    font-size: 32px;
+                    font-weight: 700;
+                }
+                if root.humidity != "": Text {
+                    text: root.humidity;
+                    color: #ffffffd9;
+                    font-size: 13px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            power-btn := Rectangle {
+                width: 50px;
+                height: 50px;
+                border-radius: 25px;
+                background: #f4f4f6;
+                drop-shadow-blur: 8px;
+                drop-shadow-color: #00000040;
+                drop-shadow-offset-y: 2px;
+                accessible-role: button;
+                accessible-label: Tr.s.power;
+                accessible-action-default => { root.power(); }
+                Image {
+                    source: @image-url("icons/power.svg");
+                    width: 24px;
+                    height: 24px;
+                    colorize: #1b1b1d;
+                }
+                TouchArea {
+                    clicked => { root.power(); }
+                }
+            }
+        }
+    }
+}
+
+// ---------- Popup ----------
+
+export component Popup inherits Window {
+    title: Tr.s.app-name;
+    no-frame: true;
+    always-on-top: true;
+    width: 380px;
+    preferred-height: 690px;
+    min-height: 300px;
+    background: Theme.bg;
+    default-font-family: "Segoe UI Variable Text";
+    default-font-size: 14px;
+
+    // Navegação: "main", "settings", "login", "about"
+    in-out property <string> view: "main";
+
+    // Cabeçalho e status
+    in property <string> device-label;
+    in property <string> place;
+    in property <bool> loaded;
+    in property <string> status-kind; // ok, sending, warn, err, loading
+    in property <string> status-text;
+    in property <string> filter-chip;
+
+    // Estado do ar
+    in property <bool> on;
+    in property <string> mode: "cool";
+    in property <string> hero-title;
+    in property <string> hero-temp;
+    in property <string> hero-humidity;
+    in property <bool> show-mode;
+    in property <string> mode-label;
+    in property <string> unit: "C";
+    in property <float> temp-min: 16;
+    in property <float> temp-max: 30;
+    in property <float> temp-step: 1;
+    in-out property <float> setpoint: 24;
+    in property <bool> show-fan;
+    in property <string> fan-label;
+    in property <bool> show-osc;
+    in property <string> osc-label;
+    in property <bool> show-windfree;
+    in property <bool> windfree-on;
+    in property <bool> show-speed;
+    in property <bool> speed-on;
+    in property <bool> show-quiet;
+    in property <bool> quiet-on;
+    // Luz: 0 sem luz, 1 botão de inverter, 2 interruptor com estado
+    in property <int> light-kind;
+    in property <bool> light-on;
+    in property <bool> show-night;
+    in property <string> night-hint;
+    // Botões sem estado mostram se deu certo: chave do botão e 1 (ok) / 2 (erro)
+    in property <string> flash-key;
+    in property <int> flash-value;
+
+    // Configurações
+    in property <string> account-text;
+    in property <bool> show-sign-in;
+    in property <bool> show-sign-out;
+    in property <bool> autostart-on;
+    in property <bool> show-beep;
+    in property <bool> show-autoclean;
+    in property <bool> autoclean-on;
+    in property <bool> show-filter;
+    in property <string> filter-text;
+    in property <bool> filter-warn;
+    in property <string> version;
+
+    // Login
+    in property <bool> oauth-available: true;
+    in property <bool> login-waiting;
+    in property <string> login-error;
+    in property <bool> back-from-login;
+
+    // Folha de opções
+    in property <bool> sheet-open;
+    in property <string> sheet-title;
+    in property <[SheetOption]> sheet-options;
+
+    callback power();
+    callback temp-preview(float);
+    callback temp-set(float);
+    callback open-sheet(string);
+    callback pick(string);
+    callback close-sheet();
+    callback toggle-optional(string);
+    callback light();
+    callback light-set(bool);
+    callback night();
+    callback beep(bool);
+    callback autoclean();
+    callback autostart();
+    callback choose-device();
+    callback view-changed(string);
+    callback sign-out();
+    callback login();
+    callback login-cancel();
+    callback manual-open();
+    callback manual-submit(string);
+    callback pat-submit(string);
+    callback quit();
+    callback escape();
+
+    property <bool> no-temp: mode == "wind";
+    property <bool> manual-open-fold;
+    property <bool> pat-open-fold;
+
+    function go(v: string) {
+        root.view = v;
+        root.view-changed(v);
+    }
+    function flash(key: string) -> int {
+        root.flash-key == key ? root.flash-value : 0
+    }
+
+    forward-focus: keys;
+    keys := FocusScope {
+        key-pressed(e) => {
+            if e.text == Key.Escape {
+                root.escape();
+                return accept;
+            }
+            reject
+        }
+
+        VerticalLayout {
+            // ---------- Controle ----------
+            if root.view == "main": VerticalLayout {
+                vertical-stretch: 1;
+                Header {
+                    title: root.device-label != "" ? root.device-label : Tr.s.airconditioner;
+                    subtitle: root.place;
+                    menu: true;
+                    menu-clicked => { root.go("settings"); }
+                }
+                Flickable {
+                    vertical-stretch: 1;
+                    content-height: main-col.preferred-height;
+                    main-col := VerticalLayout {
+                        width: parent.width;
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        padding-bottom: 10px;
+                        spacing: 10px;
+                        opacity: root.loaded ? 1 : 0.6;
+                        Panel {
+                            VerticalLayout {
+                                Hero {
+                                    on: root.on;
+                                    mode: root.mode;
+                                    title: root.hero-title;
+                                    temp: root.hero-temp;
+                                    humidity: root.hero-humidity;
+                                    power => { root.power(); }
+                                }
+                                VerticalLayout {
+                                    padding: 10px;
+                                    padding-top: 8px;
+                                    spacing: 8px;
+                                    if root.show-mode: Tile {
+                                        label: Tr.s.mode;
+                                        value: root.mode-label;
+                                        dim: !root.on;
+                                        clicked => { root.open-sheet("mode"); }
+                                    }
+                                    Rectangle {
+                                        border-radius: Theme.r-tile;
+                                        background: Theme.tile;
+                                        VerticalLayout {
+                                            padding-left: 18px;
+                                            padding-right: 18px;
+                                            padding-top: 14px;
+                                            padding-bottom: 14px;
+                                            spacing: 4px;
+                                            Text {
+                                                text: Tr.s.set-temp;
+                                                color: root.on ? Theme.muted : Theme.faint;
+                                                font-size: 13.5px;
+                                            }
+                                            Text {
+                                                text: "\{root.setpoint}°\{root.unit}";
+                                                color: root.on ? Theme.text : Theme.faint;
+                                                font-family: Theme.display-font;
+                                                font-size: 19px;
+                                                font-weight: 700;
+                                                opacity: root.no-temp ? 0.35 : 1;
+                                            }
+                                            if root.no-temp: Text {
+                                                text: Tr.s.no-temp-in-fan;
+                                                color: Theme.muted;
+                                                font-size: 12.5px;
+                                            }
+                                            HorizontalLayout {
+                                                spacing: 10px;
+                                                opacity: root.no-temp ? 0.35 : 1;
+                                                VerticalLayout {
+                                                    alignment: end;
+                                                    padding-bottom: 4px;
+                                                    RoundButton {
+                                                        icon: @image-url("icons/minus.svg");
+                                                        label: Tr.s.temp-down;
+                                                        dim: !root.on;
+                                                        clicked => {
+                                                            if !root.no-temp {
+                                                                root.temp-set(max(root.setpoint - root.temp-step, root.temp-min));
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                VerticalLayout {
+                                                    horizontal-stretch: 1;
+                                                    HorizontalLayout {
+                                                        padding-left: 3px;
+                                                        padding-right: 3px;
+                                                        Text {
+                                                            text: root.temp-min;
+                                                            color: Theme.muted;
+                                                            font-size: 13px;
+                                                        }
+                                                        Rectangle {
+                                                            horizontal-stretch: 1;
+                                                        }
+                                                        Text {
+                                                            text: root.temp-max;
+                                                            color: Theme.muted;
+                                                            font-size: 13px;
+                                                        }
+                                                    }
+                                                    TempSlider {
+                                                        minimum: root.temp-min;
+                                                        maximum: root.temp-max;
+                                                        step: root.temp-step;
+                                                        value <=> root.setpoint;
+                                                        dim: !root.on;
+                                                        label: Tr.s.set-temp;
+                                                        moving(v) => { root.temp-preview(v); }
+                                                        released(v) => {
+                                                            if !root.no-temp {
+                                                                root.temp-set(v);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                VerticalLayout {
+                                                    alignment: end;
+                                                    padding-bottom: 4px;
+                                                    RoundButton {
+                                                        icon: @image-url("icons/plus.svg");
+                                                        label: Tr.s.temp-up;
+                                                        dim: !root.on;
+                                                        clicked => {
+                                                            if !root.no-temp {
+                                                                root.temp-set(min(root.setpoint + root.temp-step, root.temp-max));
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if root.show-fan || root.show-osc: HorizontalLayout {
+                                        spacing: 8px;
+                                        if root.show-fan: IconTile {
+                                            icon: @image-url("icons/fan.svg");
+                                            label: Tr.s.fan-speed;
+                                            value: root.fan-label;
+                                            dim: !root.on;
+                                            clicked => { root.open-sheet("fan"); }
+                                        }
+                                        if root.show-osc: IconTile {
+                                            icon: @image-url("icons/dir.svg");
+                                            label: Tr.s.air-direction;
+                                            value: root.osc-label;
+                                            dim: !root.on;
+                                            clicked => { root.open-sheet("osc"); }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if root.show-windfree || root.show-speed || root.show-quiet || root.light-kind != 0 || root.show-night: Panel {
+                            VerticalLayout {
+                                padding-top: 4px;
+                                padding-bottom: 4px;
+                                if root.show-windfree: Row {
+                                    title: Tr.s.windfree;
+                                    clickable: true;
+                                    accessible-role: button;
+                                    clicked => { root.toggle-optional("windFree"); }
+                                    Switch {
+                                        on: root.windfree-on;
+                                    }
+                                }
+                                if root.show-speed: Row {
+                                    title: Tr.s.speed;
+                                    line: root.show-windfree;
+                                    clickable: true;
+                                    accessible-role: button;
+                                    clicked => { root.toggle-optional("speed"); }
+                                    Switch {
+                                        on: root.speed-on;
+                                    }
+                                }
+                                if root.show-quiet: Row {
+                                    title: Tr.s.quiet;
+                                    line: root.show-windfree || root.show-speed;
+                                    clickable: true;
+                                    accessible-role: button;
+                                    clicked => { root.toggle-optional("quiet"); }
+                                    Switch {
+                                        on: root.quiet-on;
+                                    }
+                                }
+                                if root.light-kind == 1: Row {
+                                    title: Tr.s.light;
+                                    line: root.show-windfree || root.show-speed || root.show-quiet;
+                                    Pill {
+                                        text: Tr.s.light-toggle;
+                                        flash: root.flash("light");
+                                        clicked => { root.light(); }
+                                    }
+                                }
+                                if root.light-kind == 2: Row {
+                                    title: Tr.s.light;
+                                    line: root.show-windfree || root.show-speed || root.show-quiet;
+                                    clickable: true;
+                                    accessible-role: button;
+                                    clicked => { root.light-set(!root.light-on); }
+                                    Switch {
+                                        on: root.light-on;
+                                    }
+                                }
+                                if root.show-night: Row {
+                                    title: Tr.s.night;
+                                    subtitle: root.night-hint;
+                                    line: root.show-windfree || root.show-speed || root.show-quiet || root.light-kind != 0;
+                                    Pill {
+                                        text: Tr.s.activate;
+                                        accent: true;
+                                        flash: root.flash("night");
+                                        clicked => { root.night(); }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ---------- Configurações ----------
+            if root.view == "settings": VerticalLayout {
+                vertical-stretch: 1;
+                Header {
+                    title: Tr.s.settings;
+                    back: true;
+                    back-clicked => { root.go("main"); }
+                }
+                Flickable {
+                    vertical-stretch: 1;
+                    content-height: settings-col.preferred-height;
+                    settings-col := VerticalLayout {
+                        width: parent.width;
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        padding-bottom: 10px;
+                        spacing: 10px;
+                        Panel {
+                            VerticalLayout {
+                                padding-top: 4px;
+                                padding-bottom: 4px;
+                                Row {
+                                    title: Tr.s.device;
+                                    subtitle: root.device-label;
+                                    clickable: true;
+                                    accessible-role: button;
+                                    clicked => { root.choose-device(); }
+                                    Image {
+                                        source: @image-url("icons/chev.svg");
+                                        width: 18px;
+                                        height: 18px;
+                                        colorize: Theme.faint;
+                                    }
+                                }
+                                Row {
+                                    title: Tr.s.account;
+                                    line: true;
+                                    Text {
+                                        text: root.account-text;
+                                        color: Theme.blue-text;
+                                        font-size: 14.5px;
+                                        font-weight: 600;
+                                    }
+                                }
+                                if root.show-sign-in: Row {
+                                    title: Tr.s.sign-in;
+                                    subtitle: Tr.s.pat-expires;
+                                    title-color: Theme.blue-text;
+                                    line: true;
+                                    clickable: true;
+                                    accessible-role: button;
+                                    clicked => { root.go("login"); }
+                                    Image {
+                                        source: @image-url("icons/chev.svg");
+                                        width: 18px;
+                                        height: 18px;
+                                        colorize: Theme.faint;
+                                    }
+                                }
+                                if root.show-sign-out: Row {
+                                    title: Tr.s.sign-out;
+                                    line: true;
+                                    clickable: true;
+                                    accessible-role: button;
+                                    clicked => { root.sign-out(); }
+                                }
+                            }
+                        }
+                        if root.show-beep || root.show-autoclean || root.show-filter: Panel {
+                            VerticalLayout {
+                                padding-top: 4px;
+                                padding-bottom: 4px;
+                                if root.show-beep: Row {
+                                    title: Tr.s.beep;
+                                    HorizontalLayout {
+                                        spacing: 6px;
+                                        Pill {
+                                            text: Tr.s.beep-mute;
+                                            flash: root.flash("beep-off");
+                                            clicked => { root.beep(false); }
+                                        }
+                                        Pill {
+                                            text: Tr.s.beep-on;
+                                            flash: root.flash("beep-on");
+                                            clicked => { root.beep(true); }
+                                        }
+                                    }
+                                }
+                                if root.show-autoclean: Row {
+                                    title: Tr.s.auto-clean;
+                                    line: root.show-beep;
+                                    clickable: true;
+                                    accessible-role: button;
+                                    clicked => { root.autoclean(); }
+                                    Switch {
+                                        on: root.autoclean-on;
+                                    }
+                                }
+                                if root.show-filter: Row {
+                                    title: Tr.s.filter;
+                                    line: root.show-beep || root.show-autoclean;
+                                    Text {
+                                        text: root.filter-text;
+                                        color: root.filter-warn ? Theme.warn : Theme.blue-text;
+                                        font-size: 14.5px;
+                                        font-weight: 600;
+                                    }
+                                }
+                            }
+                        }
+                        Panel {
+                            VerticalLayout {
+                                padding-top: 4px;
+                                padding-bottom: 4px;
+                                Row {
+                                    title: Tr.s.autostart;
+                                    clickable: true;
+                                    accessible-role: button;
+                                    clicked => { root.autostart(); }
+                                    Switch {
+                                        on: root.autostart-on;
+                                    }
+                                }
+                                Row {
+                                    title: Tr.s.about;
+                                    line: true;
+                                    clickable: true;
+                                    accessible-role: button;
+                                    clicked => { root.go("about"); }
+                                    Image {
+                                        source: @image-url("icons/chev.svg");
+                                        width: 18px;
+                                        height: 18px;
+                                        colorize: Theme.faint;
+                                    }
+                                }
+                                Row {
+                                    title: Tr.s.quit;
+                                    title-color: Theme.err;
+                                    line: true;
+                                    clickable: true;
+                                    accessible-role: button;
+                                    clicked => { root.quit(); }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ---------- Sobre ----------
+            if root.view == "about": VerticalLayout {
+                vertical-stretch: 1;
+                Header {
+                    title: Tr.s.about;
+                    back: true;
+                    back-clicked => { root.go("settings"); }
+                }
+                VerticalLayout {
+                    vertical-stretch: 1;
+                    padding-left: 10px;
+                    padding-right: 10px;
+                    spacing: 10px;
+                    Panel {
+                        VerticalLayout {
+                            padding: 22px;
+                            spacing: 6px;
+                            Text {
+                                text: Tr.s.app-name;
+                                color: Theme.text;
+                                font-family: Theme.display-font;
+                                font-size: 18px;
+                                font-weight: 700;
+                            }
+                            Text {
+                                text: root.version;
+                                color: Theme.muted;
+                                font-size: 13px;
+                            }
+                            Text {
+                                text: Tr.s.about-text;
+                                color: Theme.muted;
+                                font-size: 13px;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+                    Panel {
+                        background: #ffffff;
+                        VerticalLayout {
+                            padding: 16px;
+                            AboutSlint { }
+                        }
+                    }
+                    Rectangle {
+                        vertical-stretch: 1;
+                    }
+                }
+            }
+
+            // ---------- Login ----------
+            if root.view == "login": VerticalLayout {
+                vertical-stretch: 1;
+                Header {
+                    title: Tr.s.login-title;
+                    back: root.back-from-login;
+                    back-clicked => { root.go("settings"); }
+                }
+                Flickable {
+                    vertical-stretch: 1;
+                    content-height: login-col.preferred-height;
+                    login-col := VerticalLayout {
+                        width: parent.width;
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        padding-bottom: 10px;
+                        spacing: 10px;
+                        if root.oauth-available: Panel {
+                            VerticalLayout {
+                                padding: 20px;
+                                spacing: 16px;
+                                Text {
+                                    text: Tr.s.login-text;
+                                    color: Theme.muted;
+                                    wrap: word-wrap;
+                                }
+                                if !root.login-waiting: BigButton {
+                                    text: Tr.s.sign-in;
+                                    clicked => { root.login(); }
+                                }
+                                if root.login-waiting: HorizontalLayout {
+                                    spacing: 12px;
+                                    min-height: 46px;
+                                    Text {
+                                        text: Tr.s.login-wait;
+                                        color: Theme.muted;
+                                        vertical-alignment: center;
+                                        horizontal-stretch: 1;
+                                    }
+                                    VerticalLayout {
+                                        alignment: center;
+                                        Pill {
+                                            text: Tr.s.cancel;
+                                            clicked => { root.login-cancel(); }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Panel {
+                            VerticalLayout {
+                                padding-top: 4px;
+                                padding-bottom: 4px;
+                                if root.oauth-available: Row {
+                                    title: Tr.s.manual-fold;
+                                    clickable: true;
+                                    accessible-role: button;
+                                    clicked => { root.manual-open-fold = !root.manual-open-fold; }
+                                    Image {
+                                        source: @image-url("icons/chev.svg");
+                                        width: 18px;
+                                        height: 18px;
+                                        colorize: Theme.faint;
+                                        transform-rotation: root.manual-open-fold ? 90deg : 0deg;
+                                    }
+                                }
+                                if root.oauth-available && root.manual-open-fold: VerticalLayout {
+                                    padding-left: 22px;
+                                    padding-right: 22px;
+                                    padding-bottom: 16px;
+                                    spacing: 10px;
+                                    Text {
+                                        text: "1. " + Tr.s.manual-step1;
+                                        color: Theme.muted;
+                                        font-size: 13px;
+                                        wrap: word-wrap;
+                                    }
+                                    Text {
+                                        text: "2. " + Tr.s.manual-step2;
+                                        color: Theme.muted;
+                                        font-size: 13px;
+                                        wrap: word-wrap;
+                                    }
+                                    BigButton {
+                                        text: Tr.s.open-browser;
+                                        primary: false;
+                                        height: 42px;
+                                        clicked => { root.manual-open(); }
+                                    }
+                                    HorizontalLayout {
+                                        spacing: 8px;
+                                        manual-field := Field {
+                                            horizontal-stretch: 1;
+                                            placeholder: Tr.s.paste-placeholder;
+                                            accepted(t) => { root.manual-submit(t); }
+                                        }
+                                        BigButton {
+                                            text: Tr.s.ok;
+                                            height: 40px;
+                                            clicked => { root.manual-submit(manual-field.text); }
+                                        }
+                                    }
+                                }
+                                Row {
+                                    title: Tr.s.pat-fold;
+                                    line: root.oauth-available;
+                                    clickable: true;
+                                    accessible-role: button;
+                                    clicked => { root.pat-open-fold = !root.pat-open-fold; }
+                                    Image {
+                                        source: @image-url("icons/chev.svg");
+                                        width: 18px;
+                                        height: 18px;
+                                        colorize: Theme.faint;
+                                        transform-rotation: root.pat-open-fold || !root.oauth-available ? 90deg : 0deg;
+                                    }
+                                }
+                                if root.pat-open-fold || !root.oauth-available: HorizontalLayout {
+                                    padding-left: 22px;
+                                    padding-right: 22px;
+                                    padding-bottom: 16px;
+                                    spacing: 8px;
+                                    pat-field := Field {
+                                        horizontal-stretch: 1;
+                                        placeholder: Tr.s.token-placeholder;
+                                        password: true;
+                                        accepted(t) => { root.pat-submit(t); }
+                                    }
+                                    BigButton {
+                                        text: Tr.s.ok;
+                                        height: 40px;
+                                        clicked => { root.pat-submit(pat-field.text); }
+                                    }
+                                }
+                            }
+                        }
+                        if root.login-error != "": Text {
+                            text: root.login-error;
+                            color: Theme.err;
+                            font-size: 13px;
+                            wrap: word-wrap;
+                        }
+                    }
+                }
+            }
+
+            // ---------- Rodapé ----------
+            Rectangle {
+                height: 1px;
+                background: Theme.line;
+            }
+            HorizontalLayout {
+                padding-left: 20px;
+                padding-right: 20px;
+                padding-top: 9px;
+                padding-bottom: 11px;
+                spacing: 8px;
+                VerticalLayout {
+                    alignment: center;
+                    Rectangle {
+                        width: 7px;
+                        height: 7px;
+                        border-radius: 3.5px;
+                        background: root.status-kind == "ok" ? Theme.ok : root.status-kind == "sending" ? Theme.blue : root.status-kind == "warn" ? Theme.warn : root.status-kind == "err" ? Theme.err : Theme.faint;
+                    }
+                }
+                Text {
+                    text: root.status-text;
+                    color: root.status-kind == "err" ? Theme.err : Theme.muted;
+                    font-size: 12.5px;
+                    overflow: elide;
+                    horizontal-stretch: 1;
+                    vertical-alignment: center;
+                }
+                if root.filter-chip != "": Rectangle {
+                    border-radius: 11px;
+                    background: #f5b14c24;
+                    HorizontalLayout {
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        padding-top: 2px;
+                        padding-bottom: 2px;
+                        Text {
+                            text: root.filter-chip;
+                            color: Theme.warn;
+                            font-size: 12.5px;
+                            font-weight: 600;
+                        }
+                    }
+                }
+            }
+        }
+
+        // ---------- Folha de opções ----------
+        Rectangle {
+            background: root.sheet-open ? #00000099 : #00000000;
+            animate background { duration: 150ms; }
+            TouchArea {
+                enabled: root.sheet-open;
+                clicked => { root.close-sheet(); }
+            }
+        }
+        sheet := Rectangle {
+            x: 8px;
+            width: root.width - 16px;
+            height: sheet-col.preferred-height;
+            y: root.sheet-open ? root.height - self.height - 8px : root.height + 20px;
+            animate y { duration: 200ms; easing: ease-out; }
+            border-radius: Theme.r-panel;
+            background: Theme.sheet;
+            drop-shadow-blur: 30px;
+            drop-shadow-color: #00000080;
+            TouchArea { }
+            sheet-col := VerticalLayout {
+                padding-top: 22px;
+                padding-left: 8px;
+                padding-right: 8px;
+                padding-bottom: 8px;
+                HorizontalLayout {
+                    padding-left: 18px;
+                    padding-right: 18px;
+                    Text {
+                        text: root.sheet-title;
+                        color: Theme.text;
+                        font-family: Theme.display-font;
+                        font-size: 18px;
+                        font-weight: 700;
+                    }
+                }
+                Rectangle {
+                    height: 8px;
+                }
+                for opt in root.sheet-options: Rectangle {
+                    height: 50px;
+                    border-radius: 14px;
+                    background: opt-ta.has-hover ? #ffffff0d : transparent;
+                    accessible-role: radio-button;
+                    accessible-label: opt.label;
+                    accessible-checked: opt.selected;
+                    accessible-action-default => { root.pick(opt.key); }
+                    opt-ta := TouchArea {
+                        clicked => { root.pick(opt.key); }
+                    }
+                    HorizontalLayout {
+                        padding-left: 18px;
+                        padding-right: 18px;
+                        Text {
+                            text: opt.label;
+                            color: Theme.text;
+                            font-size: 16px;
+                            font-weight: opt.selected ? 600 : 400;
+                            vertical-alignment: center;
+                            horizontal-stretch: 1;
+                        }
+                        VerticalLayout {
+                            alignment: center;
+                            Rectangle {
+                                width: 22px;
+                                height: 22px;
+                                border-radius: 11px;
+                                border-width: 2px;
+                                border-color: opt.selected ? Theme.blue : Theme.faint;
+                                Rectangle {
+                                    width: 10px;
+                                    height: 10px;
+                                    border-radius: 5px;
+                                    background: opt.selected ? Theme.blue : transparent;
+                                }
+                            }
+                        }
+                    }
+                }
+                Rectangle {
+                    height: 50px;
+                    border-radius: 14px;
+                    background: cancel-ta.has-hover ? #ffffff0d : transparent;
+                    accessible-role: button;
+                    accessible-label: Tr.s.cancel;
+                    accessible-action-default => { root.close-sheet(); }
+                    cancel-ta := TouchArea {
+                        clicked => { root.close-sheet(); }
+                    }
+                    Text {
+                        text: Tr.s.cancel;
+                        color: Theme.blue-text;
+                        font-size: 15px;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+}
