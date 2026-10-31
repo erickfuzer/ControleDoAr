@@ -50,11 +50,7 @@ Não há instaladores prontos para baixar: o app OAuth carrega um client secret,
 
 ### 1. Crie o seu app OAuth na SmartThings (só uma vez)
 
-Instale a [SmartThings CLI](https://github.com/SmartThingsCommunity/smartthings-cli) (pelo instalador das releases dela ou, se tiver o Node.js, com o npm):
-
-```bash
-npm install -g @smartthings/cli
-```
+Instale a [SmartThings CLI](https://github.com/SmartThingsCommunity/smartthings-cli) pelo instalador oficial para Windows, o `smartthings.msi` da [página de releases](https://github.com/SmartThingsCommunity/smartthings-cli/releases/latest).
 
 Abra o [`docs/smartthings-app.json`](docs/smartthings-app.json), troque o `appName` por um nome único e crie o app:
 
@@ -75,7 +71,7 @@ Também dá para pular este passo: sem o app OAuth, o login pede um [token pesso
 
 ```bash
 cargo run                                                  # desenvolvimento
-powershell -ExecutionPolicy Bypass -File installeruild.ps1   # instalador em dist/
+powershell -ExecutionPolicy Bypass -File installer\build.ps1   # instalador em dist/
 ```
 
 O instalador é por usuário (não pede administrador) e substitui a versão 1 sem deixar sobras. Ao desinstalar, ele também apaga o login guardado e a configuração. Ele não tem assinatura digital, então o SmartScreen do Windows avisa na primeira vez.
@@ -111,7 +107,8 @@ ControleDoAr/
 │   ├── auth.rs, api.rs     # clientes OAuth e REST da SmartThings
 │   ├── secrets.rs          # Gerenciador de Credenciais do Windows
 │   ├── winutil.rs          # APIs do Windows (uma cópia só, tela, iniciar com o Windows)
-│   └── icon.rs             # desenha a temperatura no ícone da bandeja
+│   ├── icon.rs             # desenha a temperatura no ícone da bandeja
+│   └── hero.rs             # desenha o fundo do banner (degradê e ondas) com o ar ligado
 ├── ui/                     # interface em Slint e ícones
 ├── installer/              # script do instalador (NSIS) e build.ps1
 ├── tests/fixtures/         # status real de um aparelho, para os testes
